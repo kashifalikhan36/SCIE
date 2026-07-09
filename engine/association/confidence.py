@@ -50,8 +50,9 @@ class ConfidenceCalculator:
           total_conf_weighted += evidence.confidence * weight
           active_weight_sum += weight
           for r in evidence.reasons:
-            if r and r not in aggregated_reasons:
-              aggregated_reasons.append(f"[{label}] {r}")
+            prefixed = f"[{label}] {r}"
+            if r and prefixed not in aggregated_reasons:
+              aggregated_reasons.append(prefixed)
 
       _accumulate(metadata_evidence, association_config.WEIGHT_METADATA, "Metadata")
       _accumulate(timeline_evidence, association_config.WEIGHT_TIMELINE, "Timeline")
