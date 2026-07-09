@@ -22,15 +22,20 @@ async def lifespan(app: FastAPI):
   asyncio.create_task(mongo_manager.check_connection())
   asyncio.create_task(redis_manager.check_connection())
 
-  # Initialize and start background Audio Engine workers
+  # Initialize and start background Audio and Video Engine workers
   from engine.audio import AudioEngineWorkerManager
-  worker_manager = AudioEngineWorkerManager.get_instance()
-  worker_manager.start()
+  audio_worker_manager = AudioEngineWorkerManager.get_instance()
+  audio_worker_manager.start()
+
+  from engine.video import VideoEngineWorkerManager
+  video_worker_manager = VideoEngineWorkerManager.get_instance()
+  video_worker_manager.start()
   
   yield
   
   # Shutdown: Close database connections gracefully and stop background workers
-  await worker_manager.stop()
+  await audio_worker_manager.stop()
+  await video_worker_manager.stop()
   await mongo_manager.close()
   await redis_manager.close()
 

@@ -131,6 +131,22 @@ class ConnectionManager:
               except Exception as e:
                 print(f"[WebSocket] Error enqueuing audio chunk: {e}")
 
+            # Enqueue to Video Engine workers if it's a video chunk
+            elif msg_type == "video":
+              try:
+                chunk_index = int(filename.split(".")[0])
+                from engine.video import enqueue_video_chunk, VideoChunk
+                video_chunk = VideoChunk(
+                    meeting_id=meeting_id,
+                    timestamp=timestamp,
+                    chunk_index=chunk_index,
+                    data=payload_bytes,
+                    file_path=str(store.video_dir / filename)
+                )
+                await enqueue_video_chunk(video_chunk)
+              except Exception as e:
+                print(f"[WebSocket] Error enqueuing video chunk: {e}")
+
         except Exception as loop_err:
           # A single bad message must NEVER kill the whole WebSocket session.
           print(f"[WebSocket] Non-fatal error processing message from client {client_id}: {loop_err}")
