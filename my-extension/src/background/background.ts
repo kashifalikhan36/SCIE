@@ -286,7 +286,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 // Initialize on startup
-logger.info("Sherlock AI Extension Background worker initialized.");
+logger.info("SCIE Extension Background worker initialized.");
 chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
   if (tabs[0]) {
     checkGoogleMeetTab(tabs[0]);

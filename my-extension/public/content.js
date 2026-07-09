@@ -19,7 +19,7 @@
     window.addEventListener("DOMContentLoaded", initObserver);
   }
   function initObserver() {
-    console.log("[Sherlock AI Content Script] Injected and initializing DOM observer.");
+    console.log("[SCIE Content Script] Injected and initializing DOM observer.");
     observer.observe(document.body, {
       childList: true,
       subtree: true,
@@ -36,6 +36,8 @@
       scanTimeoutId = null;
     }
     const currentParticipants = /* @__PURE__ */ new Map();
+    const selfNameEl = document.querySelector("[data-self-name]");
+    const selfName = selfNameEl?.textContent?.trim() || "You";
     const videoElements = document.querySelectorAll("video");
     videoElements.forEach((video) => {
       let container = video.parentElement;
@@ -72,10 +74,13 @@
         depth++;
       }
       if (name && name !== "Unknown Participant") {
-        const id = name.replace(/\s+/g, "_").toLowerCase();
+        let id = name.replace(/\s+/g, "_").toLowerCase();
+        if (id === "you" || name === selfName) {
+          id = "you";
+        }
         currentParticipants.set(id, {
           id,
-          name,
+          name: id === "you" ? selfName : name,
           isMuted,
           isCameraOn,
           isSpeaking,
@@ -85,15 +90,19 @@
     });
     const panelParticipants = document.querySelectorAll("[data-participant-id], .KV5Zae, .XW3o0e");
     panelParticipants.forEach((el) => {
+      if (el.offsetParent === null) {
+        return;
+      }
       let name = "";
-      const nameEl = el.querySelector(".focus-target, .Z32Bgc, .cS4QAe");
+      const nameEl = el.querySelector(".focus-target, .Z32Bgc, .cS4QAe") || el.querySelector("span");
       if (nameEl && nameEl.textContent) {
         name = nameEl.textContent.trim();
-      } else if (el.textContent) {
-        name = el.textContent.trim();
       }
-      if (name && name.length > 0 && !name.includes("Add people") && !name.includes("Mute all")) {
-        const id = name.replace(/\s+/g, "_").toLowerCase();
+      if (name && name.length > 0 && !name.includes("Add people") && !name.includes("Mute all") && name.length < 50) {
+        let id = name.replace(/\s+/g, "_").toLowerCase();
+        if (id === "you" || name === selfName) {
+          id = "you";
+        }
         if (!currentParticipants.has(id)) {
           let isMuted = true;
           const micEl = el.querySelector("[data-is-muted]");
@@ -102,7 +111,7 @@
           }
           currentParticipants.set(id, {
             id,
-            name,
+            name: id === "you" ? selfName : name,
             isMuted,
             isCameraOn: false,
             // Assume off if not in grid with active video
@@ -113,8 +122,6 @@
       }
     });
     const selfVideo = document.querySelector("video[mirror='true']");
-    const selfNameEl = document.querySelector("[data-self-name]");
-    let selfName = selfNameEl?.textContent?.trim() || "You";
     const selfId = "you";
     if (!currentParticipants.has(selfId)) {
       const isMuted = document.querySelector("[data-is-muted='true']") !== null;

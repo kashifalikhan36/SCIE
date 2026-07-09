@@ -193,7 +193,7 @@ export default function Popup() {
             </svg>
           </div>
           <div>
-            <h1 className="text-lg font-bold tracking-tight text-slate-900 leading-none">Sherlock AI</h1>
+            <h1 className="text-lg font-bold tracking-tight text-slate-900 leading-none">SCIE</h1>
             <span className="text-[10px] text-slate-400 font-medium tracking-wider uppercase">Ingestion Console</span>
           </div>
         </div>

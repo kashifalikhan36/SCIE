@@ -17,7 +17,7 @@
       if (this.logs.length > this.maxLogs) {
         this.logs.shift();
       }
-      const logStr = `[Sherlock AI] [${entry.timestamp}] [${level}] ${message}`;
+      const logStr = `[SCIE] [${entry.timestamp}] [${level}] ${message}`;
       if (level === "ERROR") {
         console.error(logStr);
       } else if (level === "WARN") {
@@ -524,7 +524,7 @@
       sendResponse({ logs: logger.getLogs() });
     }
   });
-  logger.info("Sherlock AI Extension Background worker initialized.");
+  logger.info("SCIE Extension Background worker initialized.");
   chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
     if (tabs[0]) {
       checkGoogleMeetTab(tabs[0]);

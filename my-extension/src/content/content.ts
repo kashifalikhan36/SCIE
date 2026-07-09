@@ -31,7 +31,7 @@ if (document.readyState === "complete" || document.readyState === "interactive")
 }
 
 function initObserver() {
-  console.log("[Sherlock AI Content Script] Injected and initializing DOM observer.");
+  console.log("[SCIE Content Script] Injected and initializing DOM observer.");
   
   // Watch the entire document body for mutations
   observer.observe(document.body, {
@@ -54,6 +54,8 @@ function scanMeetDOM() {
   }
 
   const currentParticipants = new Map<string, ParticipantState>();
+  const selfNameEl = document.querySelector("[data-self-name]");
+  const selfName = selfNameEl?.textContent?.trim() || "You";
 
   // Heuristic 1: Scan grid tiles
   // In Google Meet, each participant tile has a container. We can search for video elements
@@ -111,10 +113,14 @@ function scanMeetDOM() {
 
     if (name && name !== "Unknown Participant") {
       // Use clean string as ID or name as fallback ID
-      const id = name.replace(/\s+/g, "_").toLowerCase();
+      let id = name.replace(/\s+/g, "_").toLowerCase();
+      if (id === "you" || name === selfName) {
+        id = "you";
+      }
+      
       currentParticipants.set(id, {
         id,
-        name,
+        name: id === "you" ? selfName : name,
         isMuted,
         isCameraOn,
         isSpeaking,
@@ -127,16 +133,28 @@ function scanMeetDOM() {
   // Google Meet renders a sidebar of participants when panel is toggled.
   const panelParticipants = document.querySelectorAll("[data-participant-id], .KV5Zae, .XW3o0e");
   panelParticipants.forEach((el) => {
-    let name = "";
-    const nameEl = el.querySelector(".focus-target, .Z32Bgc, .cS4QAe");
-    if (nameEl && nameEl.textContent) {
-      name = nameEl.textContent.trim();
-    } else if (el.textContent) {
-      name = el.textContent.trim();
+    // Only process visible elements (avoid hidden panel rows from closed sidebar)
+    if ((el as HTMLElement).offsetParent === null) {
+      return;
     }
 
-    if (name && name.length > 0 && !name.includes("Add people") && !name.includes("Mute all")) {
-      const id = name.replace(/\s+/g, "_").toLowerCase();
+    let name = "";
+    const nameEl = el.querySelector(".focus-target, .Z32Bgc, .cS4QAe") || el.querySelector("span");
+    if (nameEl && nameEl.textContent) {
+      name = nameEl.textContent.trim();
+    }
+
+    if (
+      name && 
+      name.length > 0 && 
+      !name.includes("Add people") && 
+      !name.includes("Mute all") &&
+      name.length < 50
+    ) {
+      let id = name.replace(/\s+/g, "_").toLowerCase();
+      if (id === "you" || name === selfName) {
+        id = "you";
+      }
       
       if (!currentParticipants.has(id)) {
         // If not found in video grid, add from list
@@ -148,7 +166,7 @@ function scanMeetDOM() {
 
         currentParticipants.set(id, {
           id,
-          name,
+          name: id === "you" ? selfName : name,
           isMuted,
           isCameraOn: false, // Assume off if not in grid with active video
           isSpeaking: false,
@@ -161,8 +179,6 @@ function scanMeetDOM() {
   // Heuristic 3: Always add "You" (the local user)
   // Google Meet always has a self-video preview or self label
   const selfVideo = document.querySelector("video[mirror='true']");
-  const selfNameEl = document.querySelector("[data-self-name]");
-  let selfName = selfNameEl?.textContent?.trim() || "You";
   const selfId = "you";
   
   if (!currentParticipants.has(selfId)) {

@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Sherlock AI",
+  "name": "SCIE",
   "version": "1.0.0",
   "description": "Ingest Google Meet real-time events and audio/video streams for AI cheating detection.",
   "permissions": [
@@ -25,6 +25,6 @@
   ],
   "action": {
     "default_popup": "index.html",
-    "default_title": "Sherlock AI"
+    "default_title": "SCIE"
   }
 }

@@ -22,7 +22,7 @@ class ExtensionLogger {
     }
 
     // Print to developer console
-    const logStr = `[Sherlock AI] [${entry.timestamp}] [${level}] ${message}`;
+    const logStr = `[SCIE] [${entry.timestamp}] [${level}] ${message}`;
     if (level === "ERROR") {
       console.error(logStr);
     } else if (level === "WARN") {

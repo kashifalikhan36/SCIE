@@ -2,7 +2,7 @@ import os
 from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
-  PROJECT_NAME: str = "Sherlock AI Backend"
+  PROJECT_NAME: str = "SCIE Backend"
   API_V1_STR: str = "/api/v1"
   
   # Directory where ingested meeting data is stored

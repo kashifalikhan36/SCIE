@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "npm run build:extension && next build",
+    "build": "npm run build:extension && next build && node fix-extension-build.js",
     "build:extension": "esbuild src/background/background.ts --bundle --outfile=public/background.js --target=chrome100 && esbuild src/content/content.ts --bundle --outfile=public/content.js --target=chrome100 && esbuild src/capture/offscreen.ts --bundle --outfile=public/offscreen.js --target=chrome100",
     "start": "next start",
     "lint": "eslint"
