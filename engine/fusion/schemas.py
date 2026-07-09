@@ -88,9 +88,9 @@ class IncomingEvidence(BaseModel):
         reliability = float(payload.get("confidence", payload.get("reliability", 0.8)))
 
     # Auto-extract IDs if not explicitly passed
-    pid = participant_id or str(payload.get("participant_id")) if payload.get("participant_id") else None
-    tid = track_id or str(payload.get("track_id")) if payload.get("track_id") else None
-    sid = speaker_id or str(payload.get("speaker_id")) if payload.get("speaker_id") else None
+    pid = participant_id or (str(payload["participant_id"]) if payload.get("participant_id") else None)
+    tid = track_id or (str(payload["track_id"]) if payload.get("track_id") else None)
+    sid = speaker_id or (str(payload["speaker_id"]) if payload.get("speaker_id") else None)
 
     return cls(
         evidence_id=ev_id,

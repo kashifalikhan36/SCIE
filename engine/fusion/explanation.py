@@ -35,7 +35,7 @@ class ExplanationBuilder:
 
     # 1. Analyze individual domains
     for domain, item in domain_map.items():
-      if item.status in (EvidenceStatus.UNAVAILABLE, EvidenceStatus.FAILED) or item.effective_weight <= 0.0:
+      if item.status in (EvidenceStatus.UNAVAILABLE, EvidenceStatus.FAILED) or item.effective_weight <= 0.01:
         gaps.append(f"{domain.capitalize()} signal currently unavailable or off.")
         reasons_by_domain[domain] = [f"{domain.capitalize()} evidence unavailable."]
         continue

@@ -31,7 +31,7 @@ class ConfidenceEngine:
       previous_confidence: float = 0.0
   ) -> Tuple[float, ConfidenceHistoryItem]:
     """Calculate current multi-signal confidence and record a historical snapshot."""
-    active_items = [it for it in domain_map.values() if it.effective_weight > 0.0]
+    active_items = [it for it in domain_map.values() if it.effective_weight > 0.01]
     active_count = len(active_items)
 
     # Rule: Never make a decision based on a single signal
@@ -39,7 +39,9 @@ class ConfidenceEngine:
       # Cap confidence at MINIMUM_CONFIDENCE or proportional to previous_confidence if lower
       raw_conf = min(previous_confidence, fusion_config.MINIMUM_CONFIDENCE)
       if active_count == 1:
-        raw_conf = max(raw_conf, fusion_config.MINIMUM_CONFIDENCE * 0.8)
+        # Don't boost if we were already lower! Just prevent it from dropping below 80% of current if it was high.
+        # But if it's already low, it drops further.
+        raw_conf = min(raw_conf, previous_confidence * 0.8)
       else:
         raw_conf = 0.0
       conf = clamp(raw_conf, 0.0, fusion_config.MINIMUM_CONFIDENCE)

@@ -5,7 +5,8 @@ Tracks and updates `ParticipantConfidence` (`current_confidence`, `previous_conf
 `highest_confidence`, `lowest_confidence`, `confidence_history`, `last_updated`,
 `active_evidence`, `missing_evidence`) across time and syncs with `ConfidenceStorageManager`.
 """
-from typing import Dict, List, Optional, Any
+import asyncio
+from typing import Dict, List, Optional, Any, Tuple
 from engine.confidence.schemas import ParticipantConfidence, ConfidenceEvent
 from engine.confidence.models import NormalizedEvidenceItem
 from engine.confidence.storage import ConfidenceStorageManager
@@ -20,26 +21,30 @@ class ConfidenceStateManager:
   def __init__(self, storage_manager: Optional[ConfidenceStorageManager] = None):
     self.storage = storage_manager or ConfidenceStorageManager()
     self.timeline_manager = ConfidenceTimelineManager()
+    self._lock = asyncio.Lock()
 
   @measure_latency
   async def get_or_create_state(self, meeting_id: str, participant_id: str) -> ParticipantConfidence:
-    """Get existing participant state from cache/memory or initialize baseline state."""
-    cached = await self.storage.get_participant_state(meeting_id, participant_id)
-    if cached:
-      return cached
+    """Get existing participant state from cache/memory or initialize baseline state atomically."""
+    async with self._lock:
+      cached = await self.storage.get_participant_state(meeting_id, participant_id)
+      if cached:
+        return cached
 
-    return ParticipantConfidence(
-        participant_id=participant_id,
-        meeting_id=meeting_id,
-        current_confidence=0.0,
-        previous_confidence=0.0,
-        highest_confidence=0.0,
-        lowest_confidence=1.0,
-        confidence_history=[],
-        last_updated=0.0,
-        active_evidence={},
-        missing_evidence=[]
-    )
+      new_state = ParticipantConfidence(
+          participant_id=participant_id,
+          meeting_id=meeting_id,
+          current_confidence=0.0,
+          previous_confidence=0.0,
+          highest_confidence=0.0,
+          lowest_confidence=1.0,
+          confidence_history=[],
+          last_updated=0.0,
+          active_evidence={},
+          missing_evidence=[]
+      )
+      self.storage._memory_state[f"{meeting_id}:{participant_id}"] = new_state
+      return new_state
 
   @measure_latency
   async def update_participant_state(
