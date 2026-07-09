@@ -109,6 +109,24 @@ class AudioEnginePipeline:
             evidence.timestamp
         )
         await self.storage_manager.save_voice_evidence(evidence)
+
+        # Enqueue transcript event to Transcript Engine
+        try:
+          from engine.transcript import enqueue_transcript_event
+          raw_event = {
+              "meeting_id": meeting_id,
+              "speaker_id": evidence.speaker_id,
+              "text": evidence.transcript,
+              "start_time": evidence.speech_start,
+              "end_time": evidence.speech_end,
+              "confidence": evidence.recognition_confidence,
+              "is_final": True,
+              "timestamp": evidence.timestamp
+          }
+          await enqueue_transcript_event(meeting_id, raw_event)
+        except Exception as e:
+          logger.error(f"Failed to enqueue transcript event: {e}")
+
         await self.storage_manager.save_audio_segment(
             meeting_id, 
             {
