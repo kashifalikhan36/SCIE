@@ -1,2 +1,6 @@
-# app/crud/crud_user.py
-# Database CRUD operations specifically for user records.
+from crud.base import CRUDBase
+
+class CRUDUser(CRUDBase):
+  pass
+
+crud_user = CRUDUser(None)

@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "npm run build:extension && next build",
+    "build:extension": "esbuild src/background/background.ts --bundle --outfile=public/background.js --target=chrome100 && esbuild src/content/content.ts --bundle --outfile=public/content.js --target=chrome100 && esbuild src/capture/offscreen.ts --bundle --outfile=public/offscreen.js --target=chrome100",
     "start": "next start",
     "lint": "eslint"
   },
@@ -15,9 +16,11 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@types/chrome": "^0.0.268",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "esbuild": "^0.25.0",
     "eslint": "^9",
     "eslint-config-next": "16.2.10",
     "tailwindcss": "^4",

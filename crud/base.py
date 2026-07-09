@@ -1,2 +1,3 @@
-# app/crud/base.py
-# Generic base CRUD operations helper class.
+class CRUDBase:
+  def __init__(self, model):
+    self.model = model

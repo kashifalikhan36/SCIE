@@ -1,2 +1,7 @@
-# app/api/v1/endpoints/users.py
-# Endpoints for user CRUD and profile management.
+from fastapi import APIRouter
+
+router = APIRouter()
+
+@router.get("/")
+def get_users():
+  return []

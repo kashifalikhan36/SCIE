@@ -1,2 +1,5 @@
-# app/schemas/token.py
-# Schema for token responses and JWT payloads.
+from pydantic import BaseModel
+
+class Token(BaseModel):
+  access_token: str
+  token_type: str

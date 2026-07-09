@@ -1,2 +1,5 @@
-# app/models/user.py
-# User database model structure (e.g. SQLAlchemy or SQLModel table schema).
+class User:
+  id: int
+  email: str
+  hashed_password: str
+  is_active: bool = True
