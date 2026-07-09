@@ -42,7 +42,7 @@ class WhisperTranscriber:
         # Call Groq audio transcription endpoint
         response = await self.client.audio.transcriptions.create(
             file=audio_buffer,
-            model="whisper-large-v3",
+            model=audio_config.GROQ_AUDIO_MODEL,
             response_format="verbose_json"
         )
         

@@ -4,6 +4,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class AudioEngineSettings(BaseSettings):
   # API key for Groq (Whisper Large v3)
   GROQ_API_KEY: str = ""
+  GROQ_AUDIO_MODEL: str = "whisper-large-v3"
   
   # Hugging Face Hub token (Required for Pyannote models)
   HF_TOKEN: str = ""
