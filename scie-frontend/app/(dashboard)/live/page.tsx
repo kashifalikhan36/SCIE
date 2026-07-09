@@ -10,9 +10,14 @@ import { Loader2, Fingerprint, Activity, Radio, Search } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function LiveDashboard() {
+  const [mounted, setMounted] = useState(false);
   const [targetMeeting, setTargetMeeting] = useState("mtg_interview_live_001");
   const [connecting, setConnecting] = useState(false);
   const { isConnected, ranking, participants, setConnectionStatus, setMeetingId, updateLiveState } = useLiveStore();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (!targetMeeting) return;
@@ -180,23 +185,29 @@ export default function LiveDashboard() {
           </CardHeader>
           <CardContent className="flex-1 overflow-y-auto space-y-4">
             <AnimatePresence>
-              {["Identity", "Visual", "Voice", "Behavior", "Transcript"].map((domain, i) => (
-                <motion.div 
-                  key={domain}
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.1 }}
-                  className="space-y-2"
-                >
-                  <div className="flex items-center justify-between text-xs font-medium">
-                    <span>{domain}</span>
-                    <span className="text-muted-foreground">{Math.floor(Math.random() * 40 + 60)}% active</span>
-                  </div>
-                  <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
-                    <div className="h-full bg-primary" style={{ width: `${Math.floor(Math.random() * 40 + 60)}%` }} />
-                  </div>
-                </motion.div>
-              ))}
+              {mounted ? ["Identity", "Visual", "Voice", "Behavior", "Transcript"].map((domain, i) => {
+                // Generate stable random values once mounted
+                const weight = Math.floor(Math.random() * 40 + 60);
+                return (
+                  <motion.div 
+                    key={domain}
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: i * 0.1 }}
+                    className="space-y-2"
+                  >
+                    <div className="flex items-center justify-between text-xs font-medium">
+                      <span>{domain}</span>
+                      <span className="text-muted-foreground">{weight}% active</span>
+                    </div>
+                    <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
+                      <div className="h-full bg-primary" style={{ width: `${weight}%` }} />
+                    </div>
+                  </motion.div>
+                );
+              }) : (
+                <div className="text-muted-foreground text-xs">Loading weights...</div>
+              )}
             </AnimatePresence>
           </CardContent>
         </Card>
