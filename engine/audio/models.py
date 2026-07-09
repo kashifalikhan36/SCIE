@@ -54,7 +54,7 @@ class ModelRegistry:
       self.vad_loaded = True
       logger.info("VAD model loaded successfully.")
     except Exception as e:
-      logger.warn(f"Could not load VAD model ({e}). Pipeline will use fallback heuristic VAD.")
+      logger.warning(f"Could not load VAD model ({e}). Pipeline will use fallback heuristic VAD.")
       self.vad_model = None
       self.vad_loaded = False
 
@@ -72,7 +72,7 @@ class ModelRegistry:
       self.diarization_loaded = True
       logger.info("Diarization model loaded successfully.")
     except Exception as e:
-      logger.warn(f"Could not load Diarization model ({e}). Pipeline will use fallback heuristic Diarization.")
+      logger.warning(f"Could not load Diarization model ({e}). Pipeline will use fallback heuristic Diarization.")
       self.diarization_model = None
       self.diarization_loaded = False
 
@@ -94,7 +94,7 @@ class ModelRegistry:
       self.speaker_rec_loaded = True
       logger.info("Speaker Recognition model loaded successfully.")
     except Exception as e:
-      logger.warn(f"Could not load Speaker Recognition model ({e}). Pipeline will use mock speaker embedding.")
+      logger.warning(f"Could not load Speaker Recognition model ({e}). Pipeline will use mock speaker embedding.")
       self.speaker_recognition_model = None
       self.speaker_rec_loaded = False
 
@@ -115,6 +115,6 @@ class ModelRegistry:
       self.lang_det_loaded = True
       logger.info("Language Detection model loaded successfully.")
     except Exception as e:
-      logger.warn(f"Could not load Language Detection model ({e}). Pipeline will use fallback language detector.")
+      logger.warning(f"Could not load Language Detection model ({e}). Pipeline will use fallback language detector.")
       self.language_detection_model = None
       self.lang_det_loaded = False

@@ -115,6 +115,22 @@ class ConnectionManager:
               f"Saved {msg_type} chunk: {filename} ({len(payload_bytes)} bytes)", "INFO"
             )
 
+            # Enqueue to Audio Engine workers if it's an audio chunk
+            if msg_type == "audio":
+              try:
+                chunk_index = int(filename.split(".")[0])
+                from engine.audio import enqueue_audio_chunk, AudioChunk
+                audio_chunk = AudioChunk(
+                    meeting_id=meeting_id,
+                    timestamp=timestamp,
+                    chunk_index=chunk_index,
+                    data=payload_bytes,
+                    file_path=str(store.audio_dir / filename)
+                )
+                await enqueue_audio_chunk(audio_chunk)
+              except Exception as e:
+                print(f"[WebSocket] Error enqueuing audio chunk: {e}")
+
         except Exception as loop_err:
           # A single bad message must NEVER kill the whole WebSocket session.
           print(f"[WebSocket] Non-fatal error processing message from client {client_id}: {loop_err}")

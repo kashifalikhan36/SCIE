@@ -24,7 +24,7 @@ def read_audio_file(file_path: str, target_sr: int = 16000) -> Tuple[bytes, int]
       data = f.read()
     return data, target_sr
   except Exception as e:
-    logger.warn(f"Failed to read audio file {file_path}: {e}. Returning mock PCM data.")
+    logger.warning(f"Failed to read audio file {file_path}: {e}. Returning mock PCM data.")
     # Return mock PCM bytes (16000 samples/sec, 16-bit mono, 1 second = 32000 bytes)
     return b"\x00" * 32000, target_sr
 
