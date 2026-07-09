@@ -57,6 +57,18 @@ class MetadataMatcher:
         target_names.extend(target_nicknames)
       target_names = [n for n in target_names if n]
 
+      # If no target name/email assigned yet on this participant, adopt metadata profile
+      if not target_names and not target_email and (names_to_test or meeting_metadata.email):
+        adopted_name = meeting_metadata.display_name or meeting_metadata.candidate_name or (names_to_test[0] if names_to_test else None)
+        return MetadataMatchEvidence(
+            score=0.85,
+            confidence=0.80,
+            reasons=[f"Adopted candidate profile from meeting metadata: '{adopted_name}' ({meeting_metadata.email})"],
+            matched_name=adopted_name,
+            matched_email=meeting_metadata.email,
+            similarity_metric="metadata_adoption"
+        )
+
       best_name_score = 0.0
       for t_name in target_names:
         for m_name in names_to_test:

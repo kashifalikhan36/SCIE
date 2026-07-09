@@ -36,6 +36,27 @@ class TranscriptMatcher:
       r"\bwelcome ([a-z]{2,20})\b"
   ]
 
+  STOP_WORDS = {
+      "and", "or", "who", "where", "when", "i", "we", "you", "he", "she", "they",
+      "will", "am", "is", "are", "to", "be", "have", "has", "had", "do", "does",
+      "did", "can", "could", "would", "should", "may", "might", "must", "from",
+      "in", "on", "at", "by", "for", "with", "about", "as", "into", "like",
+      "through", "after", "over", "between", "out", "against", "during", "without",
+      "before", "under", "around", "among", "speaking", "here", "today", "now"
+  }
+
+  def _clean_extracted_name(self, raw_name: str) -> str:
+    """Strips sentence tails, stop words, and conjunctions from extracted name."""
+    if not raw_name:
+      return ""
+    words = raw_name.strip().split()
+    valid_words = []
+    for w in words:
+      if w.lower() in self.STOP_WORDS:
+        break
+      valid_words.append(w)
+    return " ".join(valid_words).strip()
+
   def match(
       self,
       target_name: Optional[str],
@@ -65,7 +86,7 @@ class TranscriptMatcher:
       for pattern in self.SELF_INTRO_PATTERNS:
         match = re.search(pattern, cleaned_text)
         if match:
-          candidate_name = match.group(1).strip()
+          candidate_name = self._clean_extracted_name(match.group(1))
           sim = fuzz.WRatio(clean_target, candidate_name) / 100.0
           if sim >= 0.70:
             score = max(score, sim)
@@ -84,7 +105,7 @@ class TranscriptMatcher:
         for pattern in self.ADDRESSED_PATTERNS:
           match = re.search(pattern, cleaned_text)
           if match:
-            candidate_name = match.group(1).strip()
+            candidate_name = self._clean_extracted_name(match.group(1))
             sim = fuzz.WRatio(clean_target, candidate_name) / 100.0
             if sim >= 0.75:
               score = max(score, sim * 0.85)

@@ -28,6 +28,9 @@ class ParticipantBuilder:
       association_score: float,
       association_confidence: float,
       reasons: List[str],
+      track_id: Optional[str] = None,
+      speaker_id: Optional[str] = None,
+      display_name: Optional[str] = None,
       existing_state: Optional[ParticipantIdentityState] = None,
       metadata_evidence: Optional[MetadataMatchEvidence] = None,
       transcript_evidence: Optional[TranscriptMatchEvidence] = None,
@@ -36,11 +39,11 @@ class ParticipantBuilder:
       timeline_evidence: Optional[TimelineMatchEvidence] = None,
   ) -> ParticipantIdentity:
     """Creates a ParticipantIdentity object merging existing state with fresh matcher data."""
-    # 1. Start with existing attributes if available
-    display_name = existing_state.display_name if existing_state else None
+    # 1. Start with resolved and existing attributes
+    display_name = display_name or (existing_state.display_name if existing_state else None)
     email = existing_state.email if existing_state else None
-    track_id = existing_state.track_id if existing_state else None
-    speaker_id = existing_state.speaker_id if existing_state else None
+    track_id = track_id or (existing_state.track_id if existing_state else None)
+    speaker_id = speaker_id or (existing_state.speaker_id if existing_state else None)
 
     # 2. Update metadata attributes if high-confidence metadata match arrived
     if metadata_evidence and metadata_evidence.score > 0.0:

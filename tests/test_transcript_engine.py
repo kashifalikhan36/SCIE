@@ -238,6 +238,7 @@ async def test_transcript_storage_manager():
 async def test_transcript_pipeline_and_workers():
   """Test end-to-end pipeline execution and worker manager queue flows."""
   pipeline = TranscriptEnginePipeline()
+  TranscriptEngineWorkerManager._instance = None
   worker_mgr = TranscriptEngineWorkerManager.get_instance()
   worker_mgr.start()
   

@@ -52,11 +52,13 @@ class TranscriptEngineWorkerManager:
 
     Idempotent — calling ``start()`` while already running has no effect.
     """
-    if self.is_running:
+    if self.is_running and self.worker_tasks and not all(t.done() for t in self.worker_tasks):
       logger.debug("TranscriptWorkerManager: Already running — ignoring duplicate start().")
       return
 
     self.is_running = True
+    self.worker_tasks.clear()
+    self.queue = asyncio.Queue(maxsize=transcript_config.WORKER_QUEUE_MAXSIZE)
     count = transcript_config.WORKER_COUNT
     logger.info(f"TranscriptWorkerManager: Starting {count} background worker(s)...")
 
