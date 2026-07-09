@@ -20,19 +20,30 @@ class MeetingStore:
 
   def _init_directories(self):
     for d in [self.metadata_dir, self.events_dir, self.audio_dir, self.video_dir, self.logs_dir]:
-      d.mkdir(parents=True, exist_ok=True)
+      try:
+        d.mkdir(parents=True, exist_ok=True)
+      except Exception as e:
+        print(f"[MeetingStore] Failed to create directory {d}: {e}")
 
   async def log_server_message(self, message: str, level: str = "INFO"):
-    log_file = self.logs_dir / "server.log"
     import datetime
+    log_file = self.logs_dir / "server.log"
     timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
     log_line = f"[{timestamp}] [{level}] {message}\n"
     
     def _write():
-      with open(log_file, "a", encoding="utf-8") as f:
-        f.write(log_line)
-        
-    await asyncio.to_thread(_write)
+      try:
+        # Ensure log directory exists (guard against race condition)
+        self.logs_dir.mkdir(parents=True, exist_ok=True)
+        with open(log_file, "a", encoding="utf-8") as f:
+          f.write(log_line)
+      except Exception as ex:
+        print(f"[MeetingStore] Failed to write log: {ex}")
+
+    try:
+      await asyncio.to_thread(_write)
+    except Exception as ex:
+      print(f"[MeetingStore] log_server_message thread error: {ex}")
 
   async def save_meeting_metadata(self, metadata: Dict[str, Any]):
     meeting_file = self.metadata_dir / "meeting.json"

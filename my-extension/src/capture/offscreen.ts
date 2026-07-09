@@ -71,13 +71,16 @@ async function startCapture(streamId: string) {
         if (event.data && event.data.size > 0) {
           try {
             const buffer = await event.data.arrayBuffer();
+            // IMPORTANT: Chrome's runtime.sendMessage cannot serialize raw ArrayBuffer.
+            // Convert to regular Array of numbers for safe cross-context messaging.
+            const byteArray = Array.from(new Uint8Array(buffer));
             chrome.runtime.sendMessage({
               type: "AUDIO_CHUNK",
               timestamp: Date.now(),
-              data: buffer,
+              data: byteArray,
             }).catch(() => {});
           } catch (err: any) {
-            log(`Failed to process audio chunk arrayBuffer: ${err.message}`, "ERROR");
+            log(`Failed to process audio chunk: ${err.message}`, "ERROR");
           }
         }
       };
@@ -106,13 +109,15 @@ async function startCapture(streamId: string) {
         if (event.data && event.data.size > 0) {
           try {
             const buffer = await event.data.arrayBuffer();
+            // IMPORTANT: Convert to regular Array of numbers for safe cross-context messaging.
+            const byteArray = Array.from(new Uint8Array(buffer));
             chrome.runtime.sendMessage({
               type: "VIDEO_CHUNK",
               timestamp: Date.now(),
-              data: buffer,
+              data: byteArray,
             }).catch(() => {});
           } catch (err: any) {
-            log(`Failed to process video chunk arrayBuffer: ${err.message}`, "ERROR");
+            log(`Failed to process video chunk: ${err.message}`, "ERROR");
           }
         }
       };

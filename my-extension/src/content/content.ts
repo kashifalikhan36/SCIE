@@ -12,8 +12,7 @@ let scanTimeoutId: any = null;
 let lastScanTime = 0;
 
 // Setup MutationObserver to watch Google Meet DOM changes
-const observer = new MutationObserver((mutations) => {
-  // Throttle scanning to max once per second on DOM mutations
+const observer = new MutationObserver(() => {
   const now = Date.now();
   if (now - lastScanTime > 1000) {
     scanMeetDOM();
@@ -23,7 +22,6 @@ const observer = new MutationObserver((mutations) => {
   }
 });
 
-// Run once DOM is ready
 if (document.readyState === "complete" || document.readyState === "interactive") {
   initObserver();
 } else {
@@ -33,7 +31,6 @@ if (document.readyState === "complete" || document.readyState === "interactive")
 function initObserver() {
   console.log("[SCIE Content Script] Injected and initializing DOM observer.");
   
-  // Watch the entire document body for mutations
   observer.observe(document.body, {
     childList: true,
     subtree: true,
@@ -41,11 +38,18 @@ function initObserver() {
     attributeFilter: ["class", "style", "aria-label", "data-is-muted", "src"],
   });
 
-  // Also scan periodically every 3 seconds to guarantee updates
-  setInterval(scanMeetDOM, 3000);
+  // Periodic fallback scan every 5 seconds
+  setInterval(scanMeetDOM, 5000);
   scanMeetDOM();
 }
 
+/**
+ * Primary DOM scraping strategy: Google Meet renders each participant in 
+ * a container element. The most reliable signal is the participant's name
+ * label rendered below or inside each video tile.
+ *
+ * We use multiple layered strategies and deduplicate by participant ID.
+ */
 function scanMeetDOM() {
   lastScanTime = Date.now();
   if (scanTimeoutId) {
@@ -54,154 +58,169 @@ function scanMeetDOM() {
   }
 
   const currentParticipants = new Map<string, ParticipantState>();
-  const selfNameEl = document.querySelector("[data-self-name]");
-  const selfName = selfNameEl?.textContent?.trim() || "You";
-
-  // Heuristic 1: Scan grid tiles
-  // In Google Meet, each participant tile has a container. We can search for video elements
-  // and traverse up to find their tile card, name element, mic icons, etc.
-  const videoElements = document.querySelectorAll("video");
   
-  videoElements.forEach((video) => {
-    // Find closest container that resembles a tile
-    let container = video.parentElement;
-    let name = "Unknown Participant";
-    let isMuted = true;
-    let isCameraOn = video.readyState === 4 && !video.paused; // playing video
-    let isSpeaking = false;
-    let isScreenSharing = false;
+  // Determine local user name from Google Meet's self-name attribute
+  const selfNameEl = document.querySelector("[data-self-name]");
+  const selfName = selfNameEl?.textContent?.trim() || "";
 
-    // Traverse up to find a container with a name label or attributes
-    let depth = 0;
-    while (container && depth < 8) {
-      // Look for name text (Google Meet name labels usually have a specific layout)
-      // Check for elements with name tags or attributes
-      const nameEl = container.querySelector("[data-self-name], [data-name], .ytU30d, .zWDL5");
-      if (nameEl && nameEl.textContent) {
-        name = nameEl.textContent.trim();
+  // ─────────────────────────────────────────────────────────────────
+  // Strategy 1: Read name labels rendered directly in participant tiles.
+  // Google Meet renders a text label element with the participant name
+  // inside the video grid tile. We look for all visible text spans that
+  // contain a participant's display name (those inside tiles but NOT
+  // inside the top toolbar, chat panel, or reactions).
+  // ─────────────────────────────────────────────────────────────────
+  
+  // Try multiple known selector patterns for participant name labels.
+  // These can change across Google Meet updates, so we try several.
+  const nameLabelSelectors = [
+    // Data attributes (most reliable)
+    "[data-participant-id] [data-self-name]",
+    "[data-participant-id]",
+    // Class-based patterns observed in various GM versions
+    ".NsNELd",
+    ".XEazBc",
+    ".cS4QAe",
+    ".zWGUib",
+    // ARIA patterns
+    "[jsname='XpIydf']",
+    "[jsname='r4nke']",
+  ];
+
+  // Collect all participant-containing tiles
+  const participantContainers: Element[] = [];
+  
+  // Try [data-participant-id] first — most reliable
+  const participantEls = document.querySelectorAll("[data-participant-id]");
+  participantEls.forEach(el => {
+    // Ignore hidden elements (closed sidebar/panel)
+    if ((el as HTMLElement).offsetParent !== null || el.closest("[aria-hidden='false']")) {
+      participantContainers.push(el);
+    }
+  });
+
+  participantContainers.forEach((container) => {
+    const participantId = container.getAttribute("data-participant-id") || "";
+    
+    // Extract name from name element inside this tile
+    let name = "";
+    // Try multiple name extraction points
+    const nameEl = 
+      container.querySelector("[data-self-name]") ||
+      container.querySelector(".NsNELd") ||
+      container.querySelector(".XEazBc") ||
+      container.querySelector(".cS4QAe") ||
+      container.querySelector(".zWGUib") ||
+      container.querySelector("[jsname='XpIydf']");
+    
+    if (nameEl?.textContent) {
+      name = nameEl.textContent.trim();
+    }
+    
+    // If still not found, try aria-label on the container
+    if (!name) {
+      const ariaLabel = container.getAttribute("aria-label") || "";
+      if (ariaLabel && ariaLabel.length < 60) {
+        // aria-label often contains "Name's camera is off" etc. Extract just the name.
+        name = ariaLabel.split("'")[0].split(",")[0].trim();
       }
-
-      // Check if this container is screen sharing
-      // Usually Google Meet adds a screen icon or label "presentation" or "screen share"
-      const screenEl = container.querySelector("[data-is-presentation='true'], [data-screen-share='true']");
-      if (screenEl || name.toLowerCase().includes("presentation") || name.toLowerCase().includes("screen share")) {
-        isScreenSharing = true;
-      }
-
-      // Check if speaking (elements with wave animation or specific border colors)
-      const speakingEl = container.querySelector(".I9AFdf, .VfPpkd-Bz112c-LgbsSe, [data-is-speaking='true']");
-      if (speakingEl || container.classList.contains("speaking")) {
-        isSpeaking = true;
-      }
-
-      // Check if muted
-      const micEl = container.querySelector("[data-is-muted], .GvcuGe, .Qv2eCc");
-      if (micEl) {
-        const isMutedAttr = micEl.getAttribute("data-is-muted");
-        if (isMutedAttr !== null) {
-          isMuted = isMutedAttr === "true";
-        } else {
-          // Fallback check: look at mic icon paths or titles
-          const label = micEl.getAttribute("aria-label") || micEl.getAttribute("title") || "";
-          isMuted = label.toLowerCase().includes("muted") || label.toLowerCase().includes("off");
-        }
-      }
-
-      container = container.parentElement;
-      depth++;
     }
 
-    if (name && name !== "Unknown Participant") {
-      // Use clean string as ID or name as fallback ID
-      let id = name.replace(/\s+/g, "_").toLowerCase();
-      if (id === "you" || name === selfName) {
-        id = "you";
-      }
-      
+    if (!name || name.length === 0 || name.length > 60) return;
+
+    // Determine mic/camera state
+    const isMuted = !!(
+      container.querySelector("[data-is-muted='true']") ||
+      container.querySelector("[aria-label*='muted']") ||
+      container.querySelector("[aria-label*='Muted']")
+    );
+
+    const videoEl = container.querySelector("video");
+    const isCameraOn = !!(videoEl && videoEl.readyState >= 2 && !videoEl.paused);
+
+    const isSpeaking = !!(
+      container.querySelector("[data-is-speaking='true']") ||
+      container.querySelector(".speaking")
+    );
+
+    const isScreenSharing = !!(
+      container.querySelector("[data-is-presentation='true']") ||
+      container.querySelector("[aria-label*='presentation']") ||
+      container.querySelector("[aria-label*='screen']")
+    );
+
+    // Normalize ID — self-participant gets unified ID "you"
+    let id = participantId || name.replace(/\s+/g, "_").toLowerCase();
+    if (name === selfName || selfName && name.startsWith(selfName)) {
+      id = "you";
+      name = selfName || name;
+    }
+
+    currentParticipants.set(id, { id, name, isMuted, isCameraOn, isSpeaking, isScreenSharing });
+  });
+
+  // ─────────────────────────────────────────────────────────────────
+  // Strategy 2: Participant panel sidebar (when opened)
+  // ─────────────────────────────────────────────────────────────────
+  const panelNameEls = document.querySelectorAll("[data-participant-id] span[jsname], .rua5Nb");
+  panelNameEls.forEach((el) => {
+    if ((el as HTMLElement).offsetParent === null) return;
+    const name = el.textContent?.trim() || "";
+    if (!name || name.length === 0 || name.length > 60) return;
+
+    let id = name.replace(/\s+/g, "_").toLowerCase();
+    if (name === selfName || (selfName && name.startsWith(selfName))) {
+      id = "you";
+    }
+
+    if (!currentParticipants.has(id)) {
       currentParticipants.set(id, {
         id,
-        name: id === "you" ? selfName : name,
-        isMuted,
-        isCameraOn,
-        isSpeaking,
-        isScreenSharing,
+        name: id === "you" ? (selfName || name) : name,
+        isMuted: true,
+        isCameraOn: false,
+        isSpeaking: false,
+        isScreenSharing: false,
       });
     }
   });
 
-  // Heuristic 2: Scan active participant panel if open
-  // Google Meet renders a sidebar of participants when panel is toggled.
-  const panelParticipants = document.querySelectorAll("[data-participant-id], .KV5Zae, .XW3o0e");
-  panelParticipants.forEach((el) => {
-    // Only process visible elements (avoid hidden panel rows from closed sidebar)
-    if ((el as HTMLElement).offsetParent === null) {
-      return;
-    }
-
-    let name = "";
-    const nameEl = el.querySelector(".focus-target, .Z32Bgc, .cS4QAe") || el.querySelector("span");
-    if (nameEl && nameEl.textContent) {
-      name = nameEl.textContent.trim();
-    }
-
-    if (
-      name && 
-      name.length > 0 && 
-      !name.includes("Add people") && 
-      !name.includes("Mute all") &&
-      name.length < 50
-    ) {
-      let id = name.replace(/\s+/g, "_").toLowerCase();
-      if (id === "you" || name === selfName) {
-        id = "you";
+  // ─────────────────────────────────────────────────────────────────
+  // Strategy 3: Fallback — count video elements as minimum participant proxy
+  // This ensures at least a non-zero count even if DOM selectors change.
+  // Each active video element = 1 participant.
+  // ─────────────────────────────────────────────────────────────────
+  if (currentParticipants.size === 0) {
+    const videos = document.querySelectorAll("video");
+    let videoCount = 0;
+    videos.forEach((v) => {
+      if (v.readyState >= 2 || v.videoWidth > 0) {
+        videoCount++;
       }
-      
-      if (!currentParticipants.has(id)) {
-        // If not found in video grid, add from list
-        let isMuted = true;
-        const micEl = el.querySelector("[data-is-muted]");
-        if (micEl) {
-          isMuted = micEl.getAttribute("data-is-muted") === "true";
-        }
-
-        currentParticipants.set(id, {
-          id,
-          name: id === "you" ? selfName : name,
-          isMuted,
-          isCameraOn: false, // Assume off if not in grid with active video
+    });
+    
+    if (videoCount > 0) {
+      // Minimum fallback: create placeholder participants based on video count
+      for (let i = 0; i < videoCount; i++) {
+        const placeholderId = i === 0 ? "you" : `participant_${i}`;
+        const placeholderName = i === 0 ? (selfName || "You") : `Participant ${i + 1}`;
+        currentParticipants.set(placeholderId, {
+          id: placeholderId,
+          name: placeholderName,
+          isMuted: true,
+          isCameraOn: true,
           isSpeaking: false,
           isScreenSharing: false,
         });
       }
     }
-  });
-
-  // Heuristic 3: Always add "You" (the local user)
-  // Google Meet always has a self-video preview or self label
-  const selfVideo = document.querySelector("video[mirror='true']");
-  const selfId = "you";
-  
-  if (!currentParticipants.has(selfId)) {
-    const isMuted = document.querySelector("[data-is-muted='true']") !== null;
-    const isCameraOn = selfVideo !== null;
-    
-    currentParticipants.set(selfId, {
-      id: selfId,
-      name: selfName,
-      isMuted,
-      isCameraOn,
-      isSpeaking: false,
-      isScreenSharing: false,
-    });
   }
 
-  // Compare previous states with current states to emit delta events
+  // Compare and emit delta events
   generateEvents(lastParticipants, currentParticipants);
-
-  // Store current state
   lastParticipants = currentParticipants;
 
-  // Send full participant list to background (for tracking participantCount and sync)
+  // Send full participant list to background (for participant count display)
   const listEvent = {
     type: "participants_list",
     timestamp: Date.now(),
@@ -225,12 +244,10 @@ function scanMeetDOM() {
 function generateEvents(prev: Map<string, ParticipantState>, curr: Map<string, ParticipantState>) {
   const timestamp = Date.now();
 
-  // 1. Detect Joins and changes
   curr.forEach((currP, id) => {
     const prevP = prev.get(id);
 
     if (!prevP) {
-      // Participant Join
       emitMeetEvent({
         type: "participant_join",
         timestamp,
@@ -241,55 +258,24 @@ function generateEvents(prev: Map<string, ParticipantState>, curr: Map<string, P
         screen_share: currP.isScreenSharing ? "on" : "off",
       });
     } else {
-      // Camera changed
       if (currP.isCameraOn !== prevP.isCameraOn) {
-        emitMeetEvent({
-          type: currP.isCameraOn ? "camera_on" : "camera_off",
-          timestamp,
-          participant_id: currP.id,
-          display_name: currP.name,
-        });
+        emitMeetEvent({ type: currP.isCameraOn ? "camera_on" : "camera_off", timestamp, participant_id: currP.id, display_name: currP.name });
       }
-      // Mic changed
       if (currP.isMuted !== prevP.isMuted) {
-        emitMeetEvent({
-          type: currP.isMuted ? "mic_off" : "mic_on",
-          timestamp,
-          participant_id: currP.id,
-          display_name: currP.name,
-        });
+        emitMeetEvent({ type: currP.isMuted ? "mic_off" : "mic_on", timestamp, participant_id: currP.id, display_name: currP.name });
       }
-      // Screen share changed
       if (currP.isScreenSharing !== prevP.isScreenSharing) {
-        emitMeetEvent({
-          type: "screen_share",
-          timestamp,
-          participant_id: currP.id,
-          display_name: currP.name,
-          state: currP.isScreenSharing ? "on" : "off",
-        });
+        emitMeetEvent({ type: "screen_share", timestamp, participant_id: currP.id, display_name: currP.name, state: currP.isScreenSharing ? "on" : "off" });
       }
-      // Speaking changed
-      if (currP.isSpeaking !== prevP.isSpeaking && currP.isSpeaking) {
-        emitMeetEvent({
-          type: "speaker_active",
-          timestamp,
-          participant_id: currP.id,
-          display_name: currP.name,
-        });
+      if (currP.isSpeaking && !prevP.isSpeaking) {
+        emitMeetEvent({ type: "speaker_active", timestamp, participant_id: currP.id, display_name: currP.name });
       }
     }
   });
 
-  // 2. Detect Leaves
   prev.forEach((prevP, id) => {
     if (!curr.has(id)) {
-      emitMeetEvent({
-        type: "participant_leave",
-        timestamp,
-        participant_id: prevP.id,
-        display_name: prevP.name,
-      });
+      emitMeetEvent({ type: "participant_leave", timestamp, participant_id: prevP.id, display_name: prevP.name });
     }
   });
 }

@@ -474,22 +474,26 @@
       return;
     }
     if (message.type === "AUDIO_CHUNK") {
-      if (isMonitoring) {
-        wsManager.sendBinary("audio", message.timestamp, message.data);
+      if (isMonitoring && message.data) {
+        const arrayBuffer = new Uint8Array(message.data).buffer;
+        wsManager.sendBinary("audio", message.timestamp, arrayBuffer);
       }
       return;
     }
     if (message.type === "VIDEO_CHUNK") {
-      if (isMonitoring) {
-        wsManager.sendBinary("video", message.timestamp, message.data);
+      if (isMonitoring && message.data) {
+        const arrayBuffer = new Uint8Array(message.data).buffer;
+        wsManager.sendBinary("video", message.timestamp, arrayBuffer);
       }
       return;
     }
     if (message.type === "MEET_DOM_EVENT") {
+      if (message.payload.type === "participants_list") {
+        updateStoredState({ participantCount: message.payload.count });
+      }
       if (isMonitoring) {
         wsManager.sendText("event", message.payload);
         if (message.payload.type === "participants_list") {
-          updateStoredState({ participantCount: message.payload.count });
         }
       }
       return;

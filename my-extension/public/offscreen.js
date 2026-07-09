@@ -60,14 +60,15 @@
           if (event.data && event.data.size > 0) {
             try {
               const buffer = await event.data.arrayBuffer();
+              const byteArray = Array.from(new Uint8Array(buffer));
               chrome.runtime.sendMessage({
                 type: "AUDIO_CHUNK",
                 timestamp: Date.now(),
-                data: buffer
+                data: byteArray
               }).catch(() => {
               });
             } catch (err) {
-              log(`Failed to process audio chunk arrayBuffer: ${err.message}`, "ERROR");
+              log(`Failed to process audio chunk: ${err.message}`, "ERROR");
             }
           }
         };
@@ -90,14 +91,15 @@
           if (event.data && event.data.size > 0) {
             try {
               const buffer = await event.data.arrayBuffer();
+              const byteArray = Array.from(new Uint8Array(buffer));
               chrome.runtime.sendMessage({
                 type: "VIDEO_CHUNK",
                 timestamp: Date.now(),
-                data: buffer
+                data: byteArray
               }).catch(() => {
               });
             } catch (err) {
-              log(`Failed to process video chunk arrayBuffer: ${err.message}`, "ERROR");
+              log(`Failed to process video chunk: ${err.message}`, "ERROR");
             }
           }
         };

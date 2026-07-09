@@ -4,7 +4,7 @@
   var lastParticipants = /* @__PURE__ */ new Map();
   var scanTimeoutId = null;
   var lastScanTime = 0;
-  var observer = new MutationObserver((mutations) => {
+  var observer = new MutationObserver(() => {
     const now = Date.now();
     if (now - lastScanTime > 1e3) {
       scanMeetDOM();
@@ -26,7 +26,7 @@
       attributes: true,
       attributeFilter: ["class", "style", "aria-label", "data-is-muted", "src"]
     });
-    setInterval(scanMeetDOM, 3e3);
+    setInterval(scanMeetDOM, 5e3);
     scanMeetDOM();
   }
   function scanMeetDOM() {
@@ -37,103 +37,95 @@
     }
     const currentParticipants = /* @__PURE__ */ new Map();
     const selfNameEl = document.querySelector("[data-self-name]");
-    const selfName = selfNameEl?.textContent?.trim() || "You";
-    const videoElements = document.querySelectorAll("video");
-    videoElements.forEach((video) => {
-      let container = video.parentElement;
-      let name = "Unknown Participant";
-      let isMuted = true;
-      let isCameraOn = video.readyState === 4 && !video.paused;
-      let isSpeaking = false;
-      let isScreenSharing = false;
-      let depth = 0;
-      while (container && depth < 8) {
-        const nameEl = container.querySelector("[data-self-name], [data-name], .ytU30d, .zWDL5");
-        if (nameEl && nameEl.textContent) {
-          name = nameEl.textContent.trim();
-        }
-        const screenEl = container.querySelector("[data-is-presentation='true'], [data-screen-share='true']");
-        if (screenEl || name.toLowerCase().includes("presentation") || name.toLowerCase().includes("screen share")) {
-          isScreenSharing = true;
-        }
-        const speakingEl = container.querySelector(".I9AFdf, .VfPpkd-Bz112c-LgbsSe, [data-is-speaking='true']");
-        if (speakingEl || container.classList.contains("speaking")) {
-          isSpeaking = true;
-        }
-        const micEl = container.querySelector("[data-is-muted], .GvcuGe, .Qv2eCc");
-        if (micEl) {
-          const isMutedAttr = micEl.getAttribute("data-is-muted");
-          if (isMutedAttr !== null) {
-            isMuted = isMutedAttr === "true";
-          } else {
-            const label = micEl.getAttribute("aria-label") || micEl.getAttribute("title") || "";
-            isMuted = label.toLowerCase().includes("muted") || label.toLowerCase().includes("off");
-          }
-        }
-        container = container.parentElement;
-        depth++;
+    const selfName = selfNameEl?.textContent?.trim() || "";
+    const nameLabelSelectors = [
+      // Data attributes (most reliable)
+      "[data-participant-id] [data-self-name]",
+      "[data-participant-id]",
+      // Class-based patterns observed in various GM versions
+      ".NsNELd",
+      ".XEazBc",
+      ".cS4QAe",
+      ".zWGUib",
+      // ARIA patterns
+      "[jsname='XpIydf']",
+      "[jsname='r4nke']"
+    ];
+    const participantContainers = [];
+    const participantEls = document.querySelectorAll("[data-participant-id]");
+    participantEls.forEach((el) => {
+      if (el.offsetParent !== null || el.closest("[aria-hidden='false']")) {
+        participantContainers.push(el);
       }
-      if (name && name !== "Unknown Participant") {
-        let id = name.replace(/\s+/g, "_").toLowerCase();
-        if (id === "you" || name === selfName) {
-          id = "you";
+    });
+    participantContainers.forEach((container) => {
+      const participantId = container.getAttribute("data-participant-id") || "";
+      let name = "";
+      const nameEl = container.querySelector("[data-self-name]") || container.querySelector(".NsNELd") || container.querySelector(".XEazBc") || container.querySelector(".cS4QAe") || container.querySelector(".zWGUib") || container.querySelector("[jsname='XpIydf']");
+      if (nameEl?.textContent) {
+        name = nameEl.textContent.trim();
+      }
+      if (!name) {
+        const ariaLabel = container.getAttribute("aria-label") || "";
+        if (ariaLabel && ariaLabel.length < 60) {
+          name = ariaLabel.split("'")[0].split(",")[0].trim();
         }
+      }
+      if (!name || name.length === 0 || name.length > 60) return;
+      const isMuted = !!(container.querySelector("[data-is-muted='true']") || container.querySelector("[aria-label*='muted']") || container.querySelector("[aria-label*='Muted']"));
+      const videoEl = container.querySelector("video");
+      const isCameraOn = !!(videoEl && videoEl.readyState >= 2 && !videoEl.paused);
+      const isSpeaking = !!(container.querySelector("[data-is-speaking='true']") || container.querySelector(".speaking"));
+      const isScreenSharing = !!(container.querySelector("[data-is-presentation='true']") || container.querySelector("[aria-label*='presentation']") || container.querySelector("[aria-label*='screen']"));
+      let id = participantId || name.replace(/\s+/g, "_").toLowerCase();
+      if (name === selfName || selfName && name.startsWith(selfName)) {
+        id = "you";
+        name = selfName || name;
+      }
+      currentParticipants.set(id, { id, name, isMuted, isCameraOn, isSpeaking, isScreenSharing });
+    });
+    const panelNameEls = document.querySelectorAll("[data-participant-id] span[jsname], .rua5Nb");
+    panelNameEls.forEach((el) => {
+      if (el.offsetParent === null) return;
+      const name = el.textContent?.trim() || "";
+      if (!name || name.length === 0 || name.length > 60) return;
+      let id = name.replace(/\s+/g, "_").toLowerCase();
+      if (name === selfName || selfName && name.startsWith(selfName)) {
+        id = "you";
+      }
+      if (!currentParticipants.has(id)) {
         currentParticipants.set(id, {
           id,
-          name: id === "you" ? selfName : name,
-          isMuted,
-          isCameraOn,
-          isSpeaking,
-          isScreenSharing
+          name: id === "you" ? selfName || name : name,
+          isMuted: true,
+          isCameraOn: false,
+          isSpeaking: false,
+          isScreenSharing: false
         });
       }
     });
-    const panelParticipants = document.querySelectorAll("[data-participant-id], .KV5Zae, .XW3o0e");
-    panelParticipants.forEach((el) => {
-      if (el.offsetParent === null) {
-        return;
-      }
-      let name = "";
-      const nameEl = el.querySelector(".focus-target, .Z32Bgc, .cS4QAe") || el.querySelector("span");
-      if (nameEl && nameEl.textContent) {
-        name = nameEl.textContent.trim();
-      }
-      if (name && name.length > 0 && !name.includes("Add people") && !name.includes("Mute all") && name.length < 50) {
-        let id = name.replace(/\s+/g, "_").toLowerCase();
-        if (id === "you" || name === selfName) {
-          id = "you";
+    if (currentParticipants.size === 0) {
+      const videos = document.querySelectorAll("video");
+      let videoCount = 0;
+      videos.forEach((v) => {
+        if (v.readyState >= 2 || v.videoWidth > 0) {
+          videoCount++;
         }
-        if (!currentParticipants.has(id)) {
-          let isMuted = true;
-          const micEl = el.querySelector("[data-is-muted]");
-          if (micEl) {
-            isMuted = micEl.getAttribute("data-is-muted") === "true";
-          }
-          currentParticipants.set(id, {
-            id,
-            name: id === "you" ? selfName : name,
-            isMuted,
-            isCameraOn: false,
-            // Assume off if not in grid with active video
+      });
+      if (videoCount > 0) {
+        for (let i = 0; i < videoCount; i++) {
+          const placeholderId = i === 0 ? "you" : `participant_${i}`;
+          const placeholderName = i === 0 ? selfName || "You" : `Participant ${i + 1}`;
+          currentParticipants.set(placeholderId, {
+            id: placeholderId,
+            name: placeholderName,
+            isMuted: true,
+            isCameraOn: true,
             isSpeaking: false,
             isScreenSharing: false
           });
         }
       }
-    });
-    const selfVideo = document.querySelector("video[mirror='true']");
-    const selfId = "you";
-    if (!currentParticipants.has(selfId)) {
-      const isMuted = document.querySelector("[data-is-muted='true']") !== null;
-      const isCameraOn = selfVideo !== null;
-      currentParticipants.set(selfId, {
-        id: selfId,
-        name: selfName,
-        isMuted,
-        isCameraOn,
-        isSpeaking: false,
-        isScreenSharing: false
-      });
     }
     generateEvents(lastParticipants, currentParticipants);
     lastParticipants = currentParticipants;
@@ -172,48 +164,22 @@
         });
       } else {
         if (currP.isCameraOn !== prevP.isCameraOn) {
-          emitMeetEvent({
-            type: currP.isCameraOn ? "camera_on" : "camera_off",
-            timestamp,
-            participant_id: currP.id,
-            display_name: currP.name
-          });
+          emitMeetEvent({ type: currP.isCameraOn ? "camera_on" : "camera_off", timestamp, participant_id: currP.id, display_name: currP.name });
         }
         if (currP.isMuted !== prevP.isMuted) {
-          emitMeetEvent({
-            type: currP.isMuted ? "mic_off" : "mic_on",
-            timestamp,
-            participant_id: currP.id,
-            display_name: currP.name
-          });
+          emitMeetEvent({ type: currP.isMuted ? "mic_off" : "mic_on", timestamp, participant_id: currP.id, display_name: currP.name });
         }
         if (currP.isScreenSharing !== prevP.isScreenSharing) {
-          emitMeetEvent({
-            type: "screen_share",
-            timestamp,
-            participant_id: currP.id,
-            display_name: currP.name,
-            state: currP.isScreenSharing ? "on" : "off"
-          });
+          emitMeetEvent({ type: "screen_share", timestamp, participant_id: currP.id, display_name: currP.name, state: currP.isScreenSharing ? "on" : "off" });
         }
-        if (currP.isSpeaking !== prevP.isSpeaking && currP.isSpeaking) {
-          emitMeetEvent({
-            type: "speaker_active",
-            timestamp,
-            participant_id: currP.id,
-            display_name: currP.name
-          });
+        if (currP.isSpeaking && !prevP.isSpeaking) {
+          emitMeetEvent({ type: "speaker_active", timestamp, participant_id: currP.id, display_name: currP.name });
         }
       }
     });
     prev.forEach((prevP, id) => {
       if (!curr.has(id)) {
-        emitMeetEvent({
-          type: "participant_leave",
-          timestamp,
-          participant_id: prevP.id,
-          display_name: prevP.name
-        });
+        emitMeetEvent({ type: "participant_leave", timestamp, participant_id: prevP.id, display_name: prevP.name });
       }
     });
   }
