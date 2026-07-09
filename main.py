@@ -66,11 +66,26 @@ app.include_router(api_router, prefix=settings.API_V1_STR)
 def read_root():
   return {"status": "running", "project": settings.PROJECT_NAME}
 
+from websocket.dashboard_manager import dashboard_manager
+
 # WebSocket endpoint for real-time Chrome Extension streaming ingestion
 @app.websocket("/ws/meeting")
 async def websocket_endpoint(websocket: WebSocket):
   client_id = f"{websocket.client.host}:{websocket.client.port}"
   await manager.handle_client(websocket, client_id)
+
+# WebSocket endpoint for real-time Dashboard updates
+@app.websocket("/ws/dashboard/{meeting_id}")
+async def dashboard_websocket_endpoint(websocket: WebSocket, meeting_id: str):
+  await dashboard_manager.connect(websocket, meeting_id)
+  try:
+      while True:
+          # Wait for any messages from the client (e.g., heartbeat)
+          data = await websocket.receive_text()
+          if data == "ping":
+              await websocket.send_text("pong")
+  except Exception:
+      dashboard_manager.disconnect(websocket, meeting_id)
 
 if __name__ == "__main__":
   uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
