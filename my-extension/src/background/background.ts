@@ -90,6 +90,7 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 
 // Websocket Status Change handler
 wsManager.onStatusChange((connected) => {
+  updateStoredState({ isServerConnected: connected });
   if (!connected && isMonitoring) {
     logger.warn("WebSocket disconnected while monitoring. Capture remains active, chunks will be dropped.");
   }
@@ -251,23 +252,39 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   // Handle action requests from Popup UI
-  if (message.action === "connect_ws") {
-    getStoredServerUrl().then((url) => {
+  // connect_server is sent by the popup UI
+  if (message.action === "connect_server" || message.action === "connect_ws") {
+    const connectUrl = message.url || null;
+    const doConnect = (url: string) => {
       wsManager.connect(url)
-        .then(() => sendResponse({ success: true }))
-        .catch((err) => sendResponse({ success: false, error: err.message }));
-    });
+        .then(() => {
+          updateStoredState({ isServerConnected: true });
+          sendResponse({ success: true });
+        })
+        .catch((err) => {
+          updateStoredState({ isServerConnected: false });
+          sendResponse({ success: false, error: err.message });
+        });
+    };
+    if (connectUrl) {
+      doConnect(connectUrl);
+    } else {
+      getStoredServerUrl().then(doConnect);
+    }
     return true; // async
   }
 
-  if (message.action === "disconnect_ws") {
+  // disconnect_server is sent by the popup UI
+  if (message.action === "disconnect_server" || message.action === "disconnect_ws") {
     if (isMonitoring) {
       stopMonitoring().then(() => {
         wsManager.disconnect();
+        updateStoredState({ isServerConnected: false });
         sendResponse({ success: true });
       });
     } else {
       wsManager.disconnect();
+      updateStoredState({ isServerConnected: false });
       sendResponse({ success: true });
     }
     return true; // async

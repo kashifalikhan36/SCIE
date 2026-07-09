@@ -65,28 +65,28 @@ export default function LiveDashboard() {
 
   return (
     <div className="flex flex-col gap-6 max-w-7xl mx-auto">
-      <div className="flex items-center justify-between border-b border-border/40 pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/40 pb-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Live Interview</h1>
-          <p className="text-muted-foreground">Monitor real-time candidate evidence fusion</p>
+          <p className="text-muted-foreground text-sm">Monitor real-time candidate evidence fusion</p>
         </div>
-        <div className="flex items-center gap-4">
-          <div className="relative">
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="relative flex-1 sm:flex-none">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <input
               type="text"
               placeholder="Meeting ID..."
               value={targetMeeting}
               onChange={(e) => setTargetMeeting(e.target.value)}
-              className="h-9 w-64 rounded-md border border-input bg-background/50 pl-9 pr-4 text-sm ring-offset-background"
+              className="h-9 w-full sm:w-56 rounded-md border border-input bg-background/50 pl-9 pr-4 text-sm ring-offset-background focus:outline-none"
             />
           </div>
           {connecting ? (
-            <Badge variant="outline" className="gap-1.5"><Loader2 className="h-3.5 w-3.5 animate-spin"/> Connecting...</Badge>
+            <Badge variant="outline" className="gap-1.5 whitespace-nowrap"><Loader2 className="h-3.5 w-3.5 animate-spin"/> Connecting...</Badge>
           ) : isConnected ? (
-            <Badge variant="default" className="bg-green-500 hover:bg-green-600 gap-1.5"><Radio className="h-3.5 w-3.5 animate-pulse"/> Live</Badge>
+            <Badge variant="default" className="bg-green-500 hover:bg-green-600 gap-1.5 whitespace-nowrap"><Radio className="h-3.5 w-3.5 animate-pulse"/> Live</Badge>
           ) : (
-            <Badge variant="destructive">Offline</Badge>
+            <Badge variant="destructive" className="whitespace-nowrap">Offline</Badge>
           )}
         </div>
       </div>

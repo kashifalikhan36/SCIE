@@ -125,50 +125,59 @@
         clearTimeout(this.reconnectTimeoutId);
         this.reconnectTimeoutId = null;
       }
-      try {
-        this.ws = new WebSocket(url);
-        this.ws.binaryType = "arraybuffer";
-        this.ws.onopen = () => {
-          this.isConnecting = false;
-          this.reconnectDelay = 1e3;
-          logger.info("WebSocket connection established successfully.");
-          updateStoredState({ isServerConnected: true });
-          if (this.onStatusChangeCallback) {
-            this.onStatusChangeCallback(true);
-          }
-          this.startHeartbeat();
-          this.flushQueue();
-        };
-        this.ws.onclose = (event) => {
-          this.isConnecting = false;
-          logger.warn(`WebSocket closed: Code ${event.code}, Reason: ${event.reason}`);
-          this.handleDisconnect();
-        };
-        this.ws.onerror = (error) => {
-          this.isConnecting = false;
-          logger.error(`WebSocket error occurred.`);
-        };
-        this.ws.onmessage = (event) => {
-          if (typeof event.data === "string") {
-            try {
-              const data = JSON.parse(event.data);
-              if (data.type === "heartbeat" && data.status === "ack") {
-                this.lastHeartbeatAck = Date.now();
-                if (this.heartbeatTimeoutId) {
-                  clearTimeout(this.heartbeatTimeoutId);
-                  this.heartbeatTimeoutId = null;
-                }
-              }
-            } catch (e) {
-              logger.error(`Failed to parse text message from server: ${event.data}`);
+      return new Promise((resolve, reject) => {
+        try {
+          this.ws = new WebSocket(url);
+          this.ws.binaryType = "arraybuffer";
+          this.ws.onopen = () => {
+            this.isConnecting = false;
+            this.reconnectDelay = 1e3;
+            logger.info("WebSocket connection established successfully.");
+            updateStoredState({ isServerConnected: true });
+            if (this.onStatusChangeCallback) {
+              this.onStatusChangeCallback(true);
             }
-          }
-        };
-      } catch (e) {
-        this.isConnecting = false;
-        logger.error(`Failed to create WebSocket instance: ${e.message}`);
-        this.handleDisconnect();
-      }
+            this.startHeartbeat();
+            this.flushQueue();
+            resolve();
+          };
+          this.ws.onclose = (event) => {
+            if (this.isConnecting) {
+              this.isConnecting = false;
+              reject(new Error(`WebSocket closed before connecting: Code ${event.code}`));
+            } else {
+              logger.warn(`WebSocket closed: Code ${event.code}, Reason: ${event.reason}`);
+            }
+            this.handleDisconnect();
+          };
+          this.ws.onerror = (error) => {
+            this.isConnecting = false;
+            logger.error(`WebSocket error occurred.`);
+            reject(new Error("WebSocket connection failed. Check that the backend is running."));
+          };
+          this.ws.onmessage = (event) => {
+            if (typeof event.data === "string") {
+              try {
+                const data = JSON.parse(event.data);
+                if (data.type === "heartbeat" && data.status === "ack") {
+                  this.lastHeartbeatAck = Date.now();
+                  if (this.heartbeatTimeoutId) {
+                    clearTimeout(this.heartbeatTimeoutId);
+                    this.heartbeatTimeoutId = null;
+                  }
+                }
+              } catch (e) {
+                logger.error(`Failed to parse text message from server: ${event.data}`);
+              }
+            }
+          };
+        } catch (e) {
+          this.isConnecting = false;
+          logger.error(`Failed to create WebSocket instance: ${e.message}`);
+          this.handleDisconnect();
+          reject(e);
+        }
+      });
     }
     disconnect() {
       logger.info("Manually disconnecting WebSocket.");
@@ -374,6 +383,7 @@
     }
   });
   wsManager.onStatusChange((connected) => {
+    updateStoredState({ isServerConnected: connected });
     if (!connected && isMonitoring) {
       logger.warn("WebSocket disconnected while monitoring. Capture remains active, chunks will be dropped.");
     }
@@ -498,20 +508,34 @@
       }
       return;
     }
-    if (message.action === "connect_ws") {
-      getStoredServerUrl().then((url) => {
-        wsManager.connect(url).then(() => sendResponse({ success: true })).catch((err) => sendResponse({ success: false, error: err.message }));
-      });
+    if (message.action === "connect_server" || message.action === "connect_ws") {
+      const connectUrl = message.url || null;
+      const doConnect = (url) => {
+        wsManager.connect(url).then(() => {
+          updateStoredState({ isServerConnected: true });
+          sendResponse({ success: true });
+        }).catch((err) => {
+          updateStoredState({ isServerConnected: false });
+          sendResponse({ success: false, error: err.message });
+        });
+      };
+      if (connectUrl) {
+        doConnect(connectUrl);
+      } else {
+        getStoredServerUrl().then(doConnect);
+      }
       return true;
     }
-    if (message.action === "disconnect_ws") {
+    if (message.action === "disconnect_server" || message.action === "disconnect_ws") {
       if (isMonitoring) {
         stopMonitoring().then(() => {
           wsManager.disconnect();
+          updateStoredState({ isServerConnected: false });
           sendResponse({ success: true });
         });
       } else {
         wsManager.disconnect();
+        updateStoredState({ isServerConnected: false });
         sendResponse({ success: true });
       }
       return true;

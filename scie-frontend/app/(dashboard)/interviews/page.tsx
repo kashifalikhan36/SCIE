@@ -17,17 +17,17 @@ export default function InterviewsPage() {
 
   return (
     <div className="flex flex-col gap-6 max-w-7xl mx-auto">
-      <div className="flex items-center justify-between border-b border-border/40 pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/40 pb-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Interview History</h1>
-          <p className="text-muted-foreground">Historical records of all Sherlock AI candidate evaluations</p>
+          <p className="text-muted-foreground text-sm">Historical records of all Sherlock AI candidate evaluations</p>
         </div>
         <div className="relative">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <input
             type="search"
             placeholder="Search candidates or IDs..."
-            className="h-9 w-64 rounded-md border border-input bg-background/50 pl-9 pr-4 text-sm ring-offset-background"
+            className="h-9 w-full sm:w-64 rounded-md border border-input bg-background/50 pl-9 pr-4 text-sm ring-offset-background focus:outline-none"
           />
         </div>
       </div>

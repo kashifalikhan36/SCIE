@@ -34,7 +34,7 @@ export class WebSocketManager {
     this.onStatusChangeCallback = callback;
   }
 
-  async connect(url: string) {
+  async connect(url: string): Promise<void> {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       logger.info("WebSocket already connected.");
       return;
@@ -55,56 +55,66 @@ export class WebSocketManager {
       this.reconnectTimeoutId = null;
     }
 
-    try {
-      this.ws = new WebSocket(url);
-      this.ws.binaryType = "arraybuffer";
+    return new Promise<void>((resolve, reject) => {
+      try {
+        this.ws = new WebSocket(url);
+        this.ws.binaryType = "arraybuffer";
 
-      this.ws.onopen = () => {
-        this.isConnecting = false;
-        this.reconnectDelay = 1000; // reset backoff
-        logger.info("WebSocket connection established successfully.");
-        updateStoredState({ isServerConnected: true });
-        if (this.onStatusChangeCallback) {
-          this.onStatusChangeCallback(true);
-        }
-        this.startHeartbeat();
-        this.flushQueue();
-      };
-
-      this.ws.onclose = (event) => {
-        this.isConnecting = false;
-        logger.warn(`WebSocket closed: Code ${event.code}, Reason: ${event.reason}`);
-        this.handleDisconnect();
-      };
-
-      this.ws.onerror = (error) => {
-        this.isConnecting = false;
-        logger.error(`WebSocket error occurred.`);
-        // Note: Close event will follow error event, handling reconnect there
-      };
-
-      this.ws.onmessage = (event) => {
-        if (typeof event.data === "string") {
-          try {
-            const data = JSON.parse(event.data);
-            if (data.type === "heartbeat" && data.status === "ack") {
-              this.lastHeartbeatAck = Date.now();
-              if (this.heartbeatTimeoutId) {
-                clearTimeout(this.heartbeatTimeoutId);
-                this.heartbeatTimeoutId = null;
-              }
-            }
-          } catch (e) {
-            logger.error(`Failed to parse text message from server: ${event.data}`);
+        this.ws.onopen = () => {
+          this.isConnecting = false;
+          this.reconnectDelay = 1000; // reset backoff
+          logger.info("WebSocket connection established successfully.");
+          updateStoredState({ isServerConnected: true });
+          if (this.onStatusChangeCallback) {
+            this.onStatusChangeCallback(true);
           }
-        }
-      };
+          this.startHeartbeat();
+          this.flushQueue();
+          resolve(); // ✅ resolve AFTER connection is confirmed open
+        };
 
-    } catch (e: any) {
-      this.isConnecting = false;
-      logger.error(`Failed to create WebSocket instance: ${e.message}`);
-      this.handleDisconnect();
-    }
+        this.ws.onclose = (event) => {
+          if (this.isConnecting) {
+            // Still in connecting phase — reject the promise
+            this.isConnecting = false;
+            reject(new Error(`WebSocket closed before connecting: Code ${event.code}`));
+          } else {
+            logger.warn(`WebSocket closed: Code ${event.code}, Reason: ${event.reason}`);
+          }
+          this.handleDisconnect();
+        };
+
+        this.ws.onerror = (error) => {
+          this.isConnecting = false;
+          logger.error(`WebSocket error occurred.`);
+          reject(new Error("WebSocket connection failed. Check that the backend is running."));
+          // Note: Close event will follow error event, handling reconnect there
+        };
+
+        this.ws.onmessage = (event) => {
+          if (typeof event.data === "string") {
+            try {
+              const data = JSON.parse(event.data);
+              if (data.type === "heartbeat" && data.status === "ack") {
+                this.lastHeartbeatAck = Date.now();
+                if (this.heartbeatTimeoutId) {
+                  clearTimeout(this.heartbeatTimeoutId);
+                  this.heartbeatTimeoutId = null;
+                }
+              }
+            } catch (e) {
+              logger.error(`Failed to parse text message from server: ${event.data}`);
+            }
+          }
+        };
+
+      } catch (e: any) {
+        this.isConnecting = false;
+        logger.error(`Failed to create WebSocket instance: ${e.message}`);
+        this.handleDisconnect();
+        reject(e);
+      }
+    });
   }
 
   disconnect() {
