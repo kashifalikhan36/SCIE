@@ -1,5 +1,5 @@
 import os
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
   PROJECT_NAME: str = "SCIE Backend"
@@ -11,7 +11,21 @@ class Settings(BaseSettings):
       "temp-saved-data"
   )
 
-  class Config:
-    case_sensitive = True
+  # MongoDB Settings (local instance)
+  MONGO_URI: str = "mongodb://localhost:27017"
+  MONGO_DB: str = "SCIE-mg"
+
+  # Redis Settings (Azure Cache for Redis or local)
+  REDIS_URL: str | None = None
+  REDIS_HOST: str = "localhost"
+  REDIS_PORT: int = 6379
+  REDIS_PASSWORD: str | None = None
+  REDIS_SSL: bool = False
+
+  model_config = SettingsConfigDict(
+      case_sensitive=True,
+      env_file=".env",
+      extra="ignore"
+  )
 
 settings = Settings()

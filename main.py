@@ -1,13 +1,37 @@
 import uvicorn
+import asyncio
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from core.config import settings
 from api.v1.api import api_router
 from websocket.manager import manager
+from database.mongodb import MongoClientManager
+from database.redis import RedisClientManager
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+  # Startup: Initialize connection managers
+  mongo_manager = MongoClientManager.get_instance()
+  mongo_manager.initialize()
+  
+  redis_manager = RedisClientManager.get_instance()
+  redis_manager.initialize()
+  
+  # Run async connection checks in the background (non-blocking)
+  asyncio.create_task(mongo_manager.check_connection())
+  asyncio.create_task(redis_manager.check_connection())
+  
+  yield
+  
+  # Shutdown: Close database connections gracefully
+  await mongo_manager.close()
+  await redis_manager.close()
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
-    openapi_url=f"{settings.API_V1_STR}/openapi.json"
+    openapi_url=f"{settings.API_V1_STR}/openapi.json",
+    lifespan=lifespan
 )
 
 # Set up CORS middleware
