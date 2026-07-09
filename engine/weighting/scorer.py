@@ -6,9 +6,9 @@ Unavailable evidence contributes 0.0 weight.
 
 (`engine/weighting/scorer.py`)
 """
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Optional, Any
 from engine.weighting.constants import (
-    ALL_DOMAINS,
+    ALL_DOMAINS, EvidenceAvailability,
     DOMAIN_VISUAL, DOMAIN_VOICE, DOMAIN_TRANSCRIPT,
     DOMAIN_CONVERSATION, DOMAIN_BEHAVIOR, DOMAIN_IDENTITY, DOMAIN_METADATA
 )
@@ -23,7 +23,8 @@ class WeightScorerAndNormalizer:
   def normalize_weights(
       self,
       raw_weights: Dict[str, float],
-      reasons: List[str]
+      reasons: List[str],
+      availabilities: Optional[Dict[str, Any]] = None
   ) -> Tuple[Dict[str, float], float, List[str]]:
     """Normalize domain weights to 1.0 and calculate the normalization factor.
 
@@ -33,12 +34,26 @@ class WeightScorerAndNormalizer:
     total_raw = sum(max(0.0, float(raw_weights.get(dom, 0.0))) for dom in ALL_DOMAINS)
 
     if total_raw <= 1e-12:
-      # Fallback when all domains are unavailable or 0
-      fallback_weights = weighting_config.DEFAULT_STRATEGY_WEIGHTS.copy()
-      fallback_total = sum(fallback_weights.values())
-      normalized = {dom: safe_divide(fallback_weights.get(dom, 0.0), fallback_total, 0.0) for dom in ALL_DOMAINS}
-      reasons_out = list(reasons) + ["All primary domains zero/unavailable -> fallback to normalized DEFAULT strategy weights"]
-      return normalized, 1.0, reasons_out
+      # Fallback when all domains ended up at 0
+      active_doms = []
+      if availabilities:
+        active_doms = [
+            dom for dom in ALL_DOMAINS
+            if str(availabilities.get(dom, "")).upper() in ("AVAILABLE", "DEGRADED", "EVIDENCEAVAILABILITY.AVAILABLE", "EVIDENCEAVAILABILITY.DEGRADED")
+            or availabilities.get(dom) in (EvidenceAvailability.AVAILABLE, EvidenceAvailability.DEGRADED)
+        ]
+
+      if active_doms:
+        eq_weight = safe_divide(1.0, len(active_doms), 0.0)
+        normalized = {dom: eq_weight if dom in active_doms else 0.0 for dom in ALL_DOMAINS}
+        reasons_out = list(reasons) + [f"All primary raw weights zero -> fallback distributed equally across {len(active_doms)} available domain(s)"]
+        return normalized, 1.0, reasons_out
+      else:
+        fallback_weights = weighting_config.DEFAULT_STRATEGY_WEIGHTS.copy()
+        fallback_total = sum(fallback_weights.values())
+        normalized = {dom: safe_divide(fallback_weights.get(dom, 0.0), fallback_total, 0.0) for dom in ALL_DOMAINS}
+        reasons_out = list(reasons) + ["All primary domains zero/unavailable -> fallback to normalized DEFAULT strategy weights"]
+        return normalized, 1.0, reasons_out
 
     norm_factor = safe_divide(1.0, total_raw, 1.0)
     normalized = {}

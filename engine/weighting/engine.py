@@ -100,7 +100,8 @@ class DynamicWeightingEngine:
     # 6. Normalize weights to 1.0 and calculate normalization factor
     normalized_weights, norm_factor, final_reasons = self.scorer.normalize_weights(
         raw_weights=modified_weights,
-        reasons=reasons
+        reasons=reasons,
+        availabilities=availabilities
     )
 
     # 7. Construct final DynamicWeightProfile
