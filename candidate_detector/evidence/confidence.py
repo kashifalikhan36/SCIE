@@ -7,6 +7,7 @@ class EvidenceScore:
     score: float       # Raw score (0.0 to 1.0)
     confidence: float  # Confidence (0.0 to 100.0)
     reason: str
+    metadata: dict     # Structured evidence markers for explanations
 
 class BaseEvidenceModule:
     @property

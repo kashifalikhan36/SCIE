@@ -2,110 +2,169 @@
     "candidate": {
         "participant_id": "participant_002",
         "display_name": "Chivukula Jagannath",
-        "confidence": 59.4
+        "confidence": 92.76
     },
     "ranking": [
         {
             "participant_id": "participant_002",
             "display_name": "Chivukula Jagannath",
-            "confidence": 59.4,
+            "confidence": 92.76,
             "evidence_summary": [
                 {
                     "module": "Name Match",
                     "confidence": 100.0,
-                    "reason": "Exact name match: chivukula jagannath"
+                    "reason": "Exact display name match: Chivukula Jagannath",
+                    "metadata": {
+                        "match_type": "exact",
+                        "target": "Chivukula Jagannath"
+                    }
                 },
                 {
-                    "module": "Email Match",
-                    "confidence": 0.0,
-                    "reason": "Participant email missing, cannot compare."
-                },
-                {
-                    "module": "Webcam",
-                    "confidence": 50.0,
-                    "reason": "Camera toggled often or mostly off (2 toggles)."
+                    "module": "Webcam Behaviour",
+                    "confidence": 60.0,
+                    "reason": "Camera was active but toggled 2 times.",
+                    "metadata": {
+                        "toggles": 2,
+                        "active": true
+                    }
                 },
                 {
                     "module": "Screen Share",
-                    "confidence": 85.0,
-                    "reason": "Shared screen once (typical for candidate coding)."
-                },
-                {
-                    "module": "Speaking",
-                    "confidence": 85.0,
-                    "reason": "Speaking ratio 49.1% is typical for a candidate. (13 turns)"
-                },
-                {
-                    "module": "Interviewer Detection",
                     "confidence": 100.0,
-                    "reason": "Participant is not in interviewer list."
+                    "reason": "Participant shared screen 1 time(s).",
+                    "metadata": {
+                        "shares": 1
+                    }
                 },
                 {
-                    "module": "Transcript",
+                    "module": "Speaking Behaviour",
+                    "confidence": 85.0,
+                    "reason": "Speaking ratio 49.1% and average answer length (70.8s) strongly suggest candidate responding to questions.",
+                    "metadata": {
+                        "ratio": 0.4906766116142781,
+                        "turns": 13,
+                        "avg_length": 70.84615384615384
+                    }
+                },
+                {
+                    "module": "Conversation Role",
                     "confidence": 100.0,
-                    "reason": "Jagannath mostly answers questions, introduces himself when asked, shares his screen, clarifies the problem, explains and codes the solution, discusses edge cases and complexity, and receives feedback at the end."
+                    "reason": "Chivukula Jagannath introduces himself, answers the interview questions, explains his problem-solving approach, writes and discusses the algorithm, responds to hints and feedback, and is clearly the person being evaluated throughout the mock interview. The metadata also identifies him as the candidate.",
+                    "metadata": {
+                        "role_assigned": "candidate"
+                    }
                 },
                 {
-                    "module": "Embedding Similarity",
-                    "confidence": 99.99987796660974,
-                    "reason": "Semantic similarity score: 1.00"
+                    "module": "Transcript Mentions",
+                    "confidence": 90.0,
+                    "reason": "Interviewer repeatedly addressed participant as 'Chivukula Jagannath': Shrayansh Jain directly addresses Chivukula Jagannath multiple times using the name 'Jagannath', such as in the welcome statement and closing goodbye.",
+                    "metadata": {
+                        "mentioned": true
+                    }
                 },
                 {
-                    "module": "Metadata",
+                    "module": "Event Timeline",
+                    "confidence": 100.0,
+                    "reason": "Timeline events: Joined interview, Turned on webcam, Participated in speaking, Shared screen",
+                    "metadata": {
+                        "events": [
+                            "join",
+                            "speaking_start",
+                            "webcam_on",
+                            "webcam_off",
+                            "leave",
+                            "screen_share_start",
+                            "screen_share_stop"
+                        ]
+                    }
+                },
+                {
+                    "module": "Metadata Consistency",
                     "confidence": 80.0,
-                    "reason": "Participant name mentioned in Calendar Invite."
+                    "reason": "Participant name mentioned in Calendar Invite.",
+                    "metadata": {
+                        "in_invite": true
+                    }
                 }
             ]
         },
         {
             "participant_id": "participant_001",
             "display_name": "Shrayansh Jain",
-            "confidence": 17.75,
+            "confidence": 0.0,
             "evidence_summary": [
                 {
                     "module": "Name Match",
                     "confidence": 0.0,
-                    "reason": "No significant name match found."
+                    "reason": "No significant name match found.",
+                    "metadata": {
+                        "match_type": "none"
+                    }
                 },
                 {
-                    "module": "Email Match",
-                    "confidence": 0.0,
-                    "reason": "Participant email missing, cannot compare."
-                },
-                {
-                    "module": "Webcam",
-                    "confidence": 50.0,
-                    "reason": "Camera toggled often or mostly off (2 toggles)."
+                    "module": "Webcam Behaviour",
+                    "confidence": 60.0,
+                    "reason": "Camera was active but toggled 2 times.",
+                    "metadata": {
+                        "toggles": 2,
+                        "active": true
+                    }
                 },
                 {
                     "module": "Screen Share",
-                    "confidence": 30.0,
-                    "reason": "Did not share screen."
+                    "confidence": 0.0,
+                    "reason": "Participant did not share screen.",
+                    "metadata": {
+                        "shares": 0
+                    }
                 },
                 {
-                    "module": "Speaking",
+                    "module": "Speaking Behaviour",
                     "confidence": 85.0,
-                    "reason": "Speaking ratio 50.9% is typical for a candidate. (13 turns)"
+                    "reason": "Speaking ratio 50.9% and average answer length (73.5s) strongly suggest candidate responding to questions.",
+                    "metadata": {
+                        "ratio": 0.5093233883857219,
+                        "turns": 13,
+                        "avg_length": 73.53846153846153
+                    }
                 },
                 {
-                    "module": "Interviewer Detection",
+                    "module": "Conversation Role",
                     "confidence": 0.0,
-                    "reason": "Participant name matches interviewer list."
+                    "reason": "Shrayansh Jain introduces the mock interview, asks most of the questions, presents the DSA problem, probes edge cases, gives hints, evaluates the candidate's answers, discusses time complexity, and provides detailed interview feedback. The metadata also identifies Shrayansh Jain as the interviewer and organizer.",
+                    "metadata": {
+                        "role_assigned": "interviewer"
+                    }
                 },
                 {
-                    "module": "Transcript",
+                    "module": "Transcript Mentions",
                     "confidence": 0.0,
-                    "reason": "Shrayansh welcomes Jagannath to the mock interview, asks most of the questions, gives the DSA problem, provides hints, asks about complexity, controls the interview flow, and gives final feedback. He also calls the other participant by name, 'Jagannath.'"
+                    "reason": "Participant was not addressed by candidate's name.",
+                    "metadata": {
+                        "mentioned": false
+                    }
                 },
                 {
-                    "module": "Embedding Similarity",
-                    "confidence": 0.0,
-                    "reason": "Semantic similarity score: 0.26"
-                },
-                {
-                    "module": "Metadata",
+                    "module": "Event Timeline",
                     "confidence": 80.0,
-                    "reason": "Participant name mentioned in Calendar Invite."
+                    "reason": "Timeline events: Joined interview, Turned on webcam, Participated in speaking",
+                    "metadata": {
+                        "events": [
+                            "join",
+                            "speaking_start",
+                            "webcam_on",
+                            "leave",
+                            "webcam_off"
+                        ]
+                    }
+                },
+                {
+                    "module": "Metadata Consistency",
+                    "confidence": 80.0,
+                    "reason": "Participant name mentioned in Calendar Invite.",
+                    "metadata": {
+                        "in_invite": true
+                    }
                 }
             ]
         }
@@ -114,104 +173,163 @@
         {
             "participant_id": "participant_002",
             "display_name": "Chivukula Jagannath",
-            "confidence": 59.4,
+            "confidence": 92.76,
             "evidence_summary": [
                 {
                     "module": "Name Match",
                     "confidence": 100.0,
-                    "reason": "Exact name match: chivukula jagannath"
+                    "reason": "Exact display name match: Chivukula Jagannath",
+                    "metadata": {
+                        "match_type": "exact",
+                        "target": "Chivukula Jagannath"
+                    }
                 },
                 {
-                    "module": "Email Match",
-                    "confidence": 0.0,
-                    "reason": "Participant email missing, cannot compare."
-                },
-                {
-                    "module": "Webcam",
-                    "confidence": 50.0,
-                    "reason": "Camera toggled often or mostly off (2 toggles)."
+                    "module": "Webcam Behaviour",
+                    "confidence": 60.0,
+                    "reason": "Camera was active but toggled 2 times.",
+                    "metadata": {
+                        "toggles": 2,
+                        "active": true
+                    }
                 },
                 {
                     "module": "Screen Share",
-                    "confidence": 85.0,
-                    "reason": "Shared screen once (typical for candidate coding)."
-                },
-                {
-                    "module": "Speaking",
-                    "confidence": 85.0,
-                    "reason": "Speaking ratio 49.1% is typical for a candidate. (13 turns)"
-                },
-                {
-                    "module": "Interviewer Detection",
                     "confidence": 100.0,
-                    "reason": "Participant is not in interviewer list."
+                    "reason": "Participant shared screen 1 time(s).",
+                    "metadata": {
+                        "shares": 1
+                    }
                 },
                 {
-                    "module": "Transcript",
+                    "module": "Speaking Behaviour",
+                    "confidence": 85.0,
+                    "reason": "Speaking ratio 49.1% and average answer length (70.8s) strongly suggest candidate responding to questions.",
+                    "metadata": {
+                        "ratio": 0.4906766116142781,
+                        "turns": 13,
+                        "avg_length": 70.84615384615384
+                    }
+                },
+                {
+                    "module": "Conversation Role",
                     "confidence": 100.0,
-                    "reason": "Jagannath mostly answers questions, introduces himself when asked, shares his screen, clarifies the problem, explains and codes the solution, discusses edge cases and complexity, and receives feedback at the end."
+                    "reason": "Chivukula Jagannath introduces himself, answers the interview questions, explains his problem-solving approach, writes and discusses the algorithm, responds to hints and feedback, and is clearly the person being evaluated throughout the mock interview. The metadata also identifies him as the candidate.",
+                    "metadata": {
+                        "role_assigned": "candidate"
+                    }
                 },
                 {
-                    "module": "Embedding Similarity",
-                    "confidence": 99.99987796660974,
-                    "reason": "Semantic similarity score: 1.00"
+                    "module": "Transcript Mentions",
+                    "confidence": 90.0,
+                    "reason": "Interviewer repeatedly addressed participant as 'Chivukula Jagannath': Shrayansh Jain directly addresses Chivukula Jagannath multiple times using the name 'Jagannath', such as in the welcome statement and closing goodbye.",
+                    "metadata": {
+                        "mentioned": true
+                    }
                 },
                 {
-                    "module": "Metadata",
+                    "module": "Event Timeline",
+                    "confidence": 100.0,
+                    "reason": "Timeline events: Joined interview, Turned on webcam, Participated in speaking, Shared screen",
+                    "metadata": {
+                        "events": [
+                            "join",
+                            "speaking_start",
+                            "webcam_on",
+                            "webcam_off",
+                            "leave",
+                            "screen_share_start",
+                            "screen_share_stop"
+                        ]
+                    }
+                },
+                {
+                    "module": "Metadata Consistency",
                     "confidence": 80.0,
-                    "reason": "Participant name mentioned in Calendar Invite."
+                    "reason": "Participant name mentioned in Calendar Invite.",
+                    "metadata": {
+                        "in_invite": true
+                    }
                 }
             ]
         },
         {
             "participant_id": "participant_001",
             "display_name": "Shrayansh Jain",
-            "confidence": 17.75,
+            "confidence": 0.0,
             "evidence_summary": [
                 {
                     "module": "Name Match",
                     "confidence": 0.0,
-                    "reason": "No significant name match found."
+                    "reason": "No significant name match found.",
+                    "metadata": {
+                        "match_type": "none"
+                    }
                 },
                 {
-                    "module": "Email Match",
-                    "confidence": 0.0,
-                    "reason": "Participant email missing, cannot compare."
-                },
-                {
-                    "module": "Webcam",
-                    "confidence": 50.0,
-                    "reason": "Camera toggled often or mostly off (2 toggles)."
+                    "module": "Webcam Behaviour",
+                    "confidence": 60.0,
+                    "reason": "Camera was active but toggled 2 times.",
+                    "metadata": {
+                        "toggles": 2,
+                        "active": true
+                    }
                 },
                 {
                     "module": "Screen Share",
-                    "confidence": 30.0,
-                    "reason": "Did not share screen."
+                    "confidence": 0.0,
+                    "reason": "Participant did not share screen.",
+                    "metadata": {
+                        "shares": 0
+                    }
                 },
                 {
-                    "module": "Speaking",
+                    "module": "Speaking Behaviour",
                     "confidence": 85.0,
-                    "reason": "Speaking ratio 50.9% is typical for a candidate. (13 turns)"
+                    "reason": "Speaking ratio 50.9% and average answer length (73.5s) strongly suggest candidate responding to questions.",
+                    "metadata": {
+                        "ratio": 0.5093233883857219,
+                        "turns": 13,
+                        "avg_length": 73.53846153846153
+                    }
                 },
                 {
-                    "module": "Interviewer Detection",
+                    "module": "Conversation Role",
                     "confidence": 0.0,
-                    "reason": "Participant name matches interviewer list."
+                    "reason": "Shrayansh Jain introduces the mock interview, asks most of the questions, presents the DSA problem, probes edge cases, gives hints, evaluates the candidate's answers, discusses time complexity, and provides detailed interview feedback. The metadata also identifies Shrayansh Jain as the interviewer and organizer.",
+                    "metadata": {
+                        "role_assigned": "interviewer"
+                    }
                 },
                 {
-                    "module": "Transcript",
+                    "module": "Transcript Mentions",
                     "confidence": 0.0,
-                    "reason": "Shrayansh welcomes Jagannath to the mock interview, asks most of the questions, gives the DSA problem, provides hints, asks about complexity, controls the interview flow, and gives final feedback. He also calls the other participant by name, 'Jagannath.'"
+                    "reason": "Participant was not addressed by candidate's name.",
+                    "metadata": {
+                        "mentioned": false
+                    }
                 },
                 {
-                    "module": "Embedding Similarity",
-                    "confidence": 0.0,
-                    "reason": "Semantic similarity score: 0.26"
-                },
-                {
-                    "module": "Metadata",
+                    "module": "Event Timeline",
                     "confidence": 80.0,
-                    "reason": "Participant name mentioned in Calendar Invite."
+                    "reason": "Timeline events: Joined interview, Turned on webcam, Participated in speaking",
+                    "metadata": {
+                        "events": [
+                            "join",
+                            "speaking_start",
+                            "webcam_on",
+                            "leave",
+                            "webcam_off"
+                        ]
+                    }
+                },
+                {
+                    "module": "Metadata Consistency",
+                    "confidence": 80.0,
+                    "reason": "Participant name mentioned in Calendar Invite.",
+                    "metadata": {
+                        "in_invite": true
+                    }
                 }
             ]
         }

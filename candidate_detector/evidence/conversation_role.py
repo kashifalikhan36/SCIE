@@ -3,35 +3,31 @@ from .confidence import BaseEvidenceModule, EvidenceScore
 from models import InterviewData
 from llm import analyze_transcript_roles
 
-class TranscriptModule(BaseEvidenceModule):
+class ConversationRoleModule(BaseEvidenceModule):
     def run(self, data: InterviewData) -> list[EvidenceScore]:
         scores = []
         if not data.transcript:
             return []
             
-        # Format transcript for LLM
         transcript_text = "\n".join([f"{t.speaker_name} [{t.start_time} - {t.end_time}]: {t.text}" for t in data.transcript])
         
-        # We might want to truncate if it's too long, but let's assume it fits in context
-        llm_response = analyze_transcript_roles(transcript_text)
+        candidate_md = str(data.external_metadata.model_dump())
+        interviewers = ", ".join(data.external_metadata.interviewer_names)
+        
+        llm_response = analyze_transcript_roles(transcript_text, candidate_md, interviewers)
         
         try:
-            results = json.loads(llm_response)
-            if not isinstance(results, list):
-                if isinstance(results, dict) and "participants" in results:
-                    results = results["participants"]
-                elif isinstance(results, dict):
-                    results = [results]
+            parsed = json.loads(llm_response)
+            results = parsed.get("participants", [])
         except Exception as e:
             return []
             
         for participant in data.participant_information:
-            disp_name = participant.display_name
-            # Find in results
+            disp_name = participant.display_name.lower()
             matched_res = None
             for res in results:
-                # the LLM might return partial names
-                if res.get("participant_name", "").lower() in disp_name.lower() or disp_name.lower() in res.get("participant_name", "").lower():
+                res_name = res.get("participant_name", "").lower()
+                if res_name and (res_name in disp_name or disp_name in res_name):
                     matched_res = res
                     break
                     
@@ -50,7 +46,8 @@ class TranscriptModule(BaseEvidenceModule):
                     module=self.name,
                     score=score_val / 100.0,
                     confidence=score_val,
-                    reason=reason
+                    reason=reason,
+                    metadata={"role_assigned": role}
                 ))
                 
         return scores

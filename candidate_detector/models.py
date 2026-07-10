@@ -20,6 +20,8 @@ class ScreenShareEvent(BaseModel):
 class ParticipantInfo(BaseModel):
     participant_id: str = Field(alias="Participant ID")
     display_name: str = Field(alias="Display name")
+    email: Optional[str] = Field(None, alias="Email")
+    account_id: Optional[str] = Field(None, alias="Account ID")
     join_leave_events: List[JoinLeaveEvent] = Field(default_factory=list, alias="Join/leave events")
     webcam_events: List[WebcamEvent] = Field(default_factory=list, alias="Webcam on/off")
     screen_share_events: List[ScreenShareEvent] = Field(default_factory=list, alias="Screen share events")

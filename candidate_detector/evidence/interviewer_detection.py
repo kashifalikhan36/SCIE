@@ -25,7 +25,8 @@ class InterviewerDetectionModule(BaseEvidenceModule):
                     module=self.name,
                     score=0.0,
                     confidence=0.0,
-                    reason=f"Participant name matches interviewer list."
+                    reason=f"Participant name matches interviewer list.",
+                    metadata={"is_interviewer": True}
                 ))
             else:
                 scores.append(EvidenceScore(
@@ -33,7 +34,8 @@ class InterviewerDetectionModule(BaseEvidenceModule):
                     module=self.name,
                     score=1.0,
                     confidence=100.0,
-                    reason=f"Participant is not in interviewer list."
+                    reason=f"Participant is not in interviewer list.",
+                    metadata={"is_interviewer": False}
                 ))
                 
         return scores

@@ -12,7 +12,6 @@ class JoinTimingModule(BaseEvidenceModule):
             return []
             
         try:
-            # Combine date and time for a full datetime object
             start_dt_str = f"{schedule.date}T{schedule.start_time}"
             interview_start = parse_time(start_dt_str)
         except Exception:
@@ -27,15 +26,16 @@ class JoinTimingModule(BaseEvidenceModule):
                     module=self.name,
                     score=0.0,
                     confidence=0.0,
-                    reason="No join events found."
+                    reason="No join events found.",
+                    metadata={"join_events": 0}
                 ))
                 continue
                 
             first_join = parse_time(join_events[0].timestamp)
             diff = (first_join - interview_start).total_seconds()
+            diff_minutes = round(diff / 60.0, 1)
             
-            # Candidates usually join slightly early or exactly on time
-            if diff < -300: # more than 5 mins early
+            if diff < -300:
                 conf = 80.0
                 reason = "Joined more than 5 mins early."
             elif -300 <= diff <= 0:
@@ -48,7 +48,6 @@ class JoinTimingModule(BaseEvidenceModule):
                 conf = 40.0
                 reason = "Joined very late."
                 
-            # Check for rejoins
             if len(join_events) > 1:
                 reason += f" Participant rejoined {len(join_events) - 1} times."
                 
@@ -57,7 +56,8 @@ class JoinTimingModule(BaseEvidenceModule):
                 module=self.name,
                 score=conf / 100.0,
                 confidence=conf,
-                reason=reason
+                reason=reason,
+                metadata={"join_delta_minutes": diff_minutes, "rejoins": len(join_events) - 1}
             ))
             
         return scores

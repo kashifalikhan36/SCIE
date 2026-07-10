@@ -19,7 +19,8 @@ class MetadataModule(BaseEvidenceModule):
                     module=self.name,
                     score=0.8,
                     confidence=80.0,
-                    reason="Participant name mentioned in Calendar Invite."
+                    reason="Participant name mentioned in Calendar Invite.",
+                    metadata={"in_invite": True}
                 ))
             else:
                 scores.append(EvidenceScore(
@@ -27,7 +28,8 @@ class MetadataModule(BaseEvidenceModule):
                     module=self.name,
                     score=0.2,
                     confidence=20.0,
-                    reason="Participant name not explicitly found in Metadata/Invite."
+                    reason="Participant name not explicitly found in Metadata/Invite.",
+                    metadata={"in_invite": False}
                 ))
                 
         return scores

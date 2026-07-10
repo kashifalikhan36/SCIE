@@ -8,35 +8,37 @@ def get_chat_client() -> AzureOpenAI:
         azure_endpoint=AZURE_OPENAI_ENDPOINT
     )
 
-def analyze_transcript_roles(transcript_text: str) -> str:
-    """
-    Calls Azure OpenAI to determine candidate vs interviewer roles
-    based on the transcript.
-    """
+def analyze_transcript_roles(transcript_text: str, candidate_metadata: str, interviewer_names: str) -> str:
     client = get_chat_client()
-    
     prompt = f"""
     Analyze the following interview transcript and determine the role of each participant.
-    Identify who the 'candidate' is based on:
-    - Who mostly asks questions?
-    - Who mostly answers?
-    - Did anyone introduce themselves?
-    - Did the interviewer call anyone by name?
+    Candidate metadata: {candidate_metadata}
+    Interviewer names: {interviewer_names}
     
-    Return a structured JSON output with the format:
-    [
-      {{
-        "participant_name": "...",
-        "role": "candidate|interviewer",
-        "confidence": 0-100,
-        "reason": "..."
-      }}
-    ]
+    Determine:
+    - Who mostly asks questions?
+    - Who mostly answers questions?
+    - Who introduces themselves?
+    - Who explains technical concepts?
+    - Who appears to be evaluated?
+    - Who behaves like interviewer?
+    - Who behaves like observer?
+
+    Return a structured JSON output with the exact format:
+    {{
+      "participants": [
+        {{
+          "participant_name": "...",
+          "role": "candidate|interviewer|observer",
+          "confidence": 0-100,
+          "reason": "..."
+        }}
+      ]
+    }}
     
     Transcript:
     {transcript_text}
     """
-    
     try:
         response = client.chat.completions.create(
             model=CHAT_DEPLOYMENT,
@@ -45,7 +47,6 @@ def analyze_transcript_roles(transcript_text: str) -> str:
         )
         return response.choices[0].message.content
     except Exception as e:
-        # Fallback without json_object if model doesn't support it (like some reasoning deployments)
         try:
             response = client.chat.completions.create(
                 model=CHAT_DEPLOYMENT,
@@ -53,4 +54,41 @@ def analyze_transcript_roles(transcript_text: str) -> str:
             )
             return response.choices[0].message.content
         except Exception as inner_e:
-            return "[]"
+            return '{"participants": []}'
+
+def analyze_transcript_mentions(transcript_text: str, candidate_name: str) -> str:
+    client = get_chat_client()
+    prompt = f"""
+    Analyze the following interview transcript to find if any speaker is repeatedly addressing another participant using the candidate's name: '{candidate_name}'.
+    
+    Extract who is being addressed by this name.
+    Return a structured JSON output with the exact format:
+    {{
+      "mentions": [
+        {{
+          "addressed_participant": "...",
+          "addressed_as": "...",
+          "reason": "..."
+        }}
+      ]
+    }}
+    
+    Transcript:
+    {transcript_text}
+    """
+    try:
+        response = client.chat.completions.create(
+            model=CHAT_DEPLOYMENT,
+            messages=[{"role": "user", "content": prompt}],
+            response_format={"type": "json_object"}
+        )
+        return response.choices[0].message.content
+    except Exception as e:
+        try:
+            response = client.chat.completions.create(
+                model=CHAT_DEPLOYMENT,
+                messages=[{"role": "user", "content": prompt + "\nEnsure you respond with strictly valid JSON only."}]
+            )
+            return response.choices[0].message.content
+        except Exception as inner_e:
+            return '{"mentions": []}'

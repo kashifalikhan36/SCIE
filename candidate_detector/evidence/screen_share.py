@@ -9,32 +9,25 @@ class ScreenShareModule(BaseEvidenceModule):
             events = participant.screen_share_events
             start_events = [e for e in events if e.event == "screen_share_start"]
             
-            if not start_events:
+            shares = len(start_events)
+            
+            if shares > 0:
                 scores.append(EvidenceScore(
                     participant_id=participant.participant_id,
                     module=self.name,
-                    score=0.3,
-                    confidence=30.0,
-                    reason="Did not share screen."
+                    score=1.0,
+                    confidence=100.0,
+                    reason=f"Participant shared screen {shares} time(s).",
+                    metadata={"shares": shares}
                 ))
-                continue
-                
-            shares = len(start_events)
-            
-            # Candidates are usually the ones asked to share screen for coding
-            if shares == 1:
-                conf = 85.0
-                reason = "Shared screen once (typical for candidate coding)."
             else:
-                conf = 90.0
-                reason = f"Shared screen multiple times ({shares} times)."
+                scores.append(EvidenceScore(
+                    participant_id=participant.participant_id,
+                    module=self.name,
+                    score=0.0,
+                    confidence=0.0,
+                    reason="Participant did not share screen.",
+                    metadata={"shares": 0}
+                ))
                 
-            scores.append(EvidenceScore(
-                participant_id=participant.participant_id,
-                module=self.name,
-                score=conf / 100.0,
-                confidence=conf,
-                reason=reason
-            ))
-            
         return scores

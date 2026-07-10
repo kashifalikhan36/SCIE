@@ -1,27 +1,29 @@
 from models import InterviewData
+from evidence.identity_correlation import IdentityCorrelationModule
 from evidence.name_match import NameMatchModule
-from evidence.email_match import EmailMatchModule
 from evidence.join_events import JoinTimingModule
 from evidence.webcam import WebcamModule
 from evidence.screen_share import ScreenShareModule
 from evidence.speaking import SpeakingModule
 from evidence.interviewer_detection import InterviewerDetectionModule
-from evidence.transcript import TranscriptModule
-from evidence.embedding_match import EmbeddingMatchModule
+from evidence.conversation_role import ConversationRoleModule
+from evidence.transcript_mentions import TranscriptMentionsModule
+from evidence.timeline import TimelineModule
 from evidence.metadata import MetadataModule
 
 class Detector:
     def __init__(self):
         self.modules = [
+            IdentityCorrelationModule(),
             NameMatchModule(),
-            EmailMatchModule(),
             JoinTimingModule(),
             WebcamModule(),
             ScreenShareModule(),
             SpeakingModule(),
             InterviewerDetectionModule(),
-            TranscriptModule(),
-            EmbeddingMatchModule(),
+            ConversationRoleModule(),
+            TranscriptMentionsModule(),
+            TimelineModule(),
             MetadataModule()
         ]
 
@@ -31,18 +33,18 @@ class Detector:
             try:
                 evidence = module.run(data)
                 
-                # Fix module names to match the weights map in config if needed
                 name_map = {
+                    "IdentityCorrelationModule": "Identity Correlation",
                     "NameMatchModule": "Name Match",
-                    "EmailMatchModule": "Email Match",
-                    "JoinTimingModule": "Join Timing",
-                    "WebcamModule": "Webcam",
+                    "JoinTimingModule": "Join Timeline",
+                    "WebcamModule": "Webcam Behaviour",
                     "ScreenShareModule": "Screen Share",
-                    "SpeakingModule": "Speaking",
-                    "InterviewerDetectionModule": "Interviewer Detection", # No weight explicitly given, acts as penalty
-                    "TranscriptModule": "Transcript",
-                    "EmbeddingMatchModule": "Embedding Similarity",
-                    "MetadataModule": "Metadata"
+                    "SpeakingModule": "Speaking Behaviour",
+                    "InterviewerDetectionModule": "Interviewer Detection",
+                    "ConversationRoleModule": "Conversation Role",
+                    "TranscriptMentionsModule": "Transcript Mentions",
+                    "TimelineModule": "Event Timeline",
+                    "MetadataModule": "Metadata Consistency"
                 }
                 
                 for ev in evidence:
@@ -50,8 +52,7 @@ class Detector:
                     
                 all_evidence.extend(evidence)
             except Exception as e:
-                # If any information is missing, skip module and continue running
-                # print(f"Warning: {module.name} failed with error: {e}")
+                # Never crash, simply skip
                 pass
                 
         return all_evidence
