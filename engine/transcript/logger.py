@@ -33,8 +33,8 @@ def measure_latency(stage_name: str):
         logger.error(f"[LATENCY] Stage '{stage_name}' failed after {duration_ms:.2f}ms: {e}")
         raise
 
-    import asyncio
-    if asyncio.iscoroutinefunction(func):
+    import inspect
+    if inspect.iscoroutinefunction(func):
       return async_wrapper
     return sync_wrapper
   return decorator

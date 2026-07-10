@@ -45,3 +45,9 @@ export const fetchMeetingAnalytics = async (meetingId: string) => {
   const { data } = await api.get(`/dashboard/meetings/${meetingId}/analytics`);
   return data;
 };
+
+export const fetchDashboardStats = async () => {
+  const { data } = await api.get("/dashboard/stats");
+  return data;
+};
+

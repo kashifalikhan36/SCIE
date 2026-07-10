@@ -4,6 +4,8 @@
   var audioRecorder = null;
   var videoRecorder = null;
   var activeStream = null;
+  var audioInitSegment = null;
+  var videoInitSegment = null;
   function log(msg, level = "INFO") {
     chrome.runtime.sendMessage({
       type: "OFFSCREEN_LOG",
@@ -27,8 +29,20 @@
       sendResponse({ success: true });
     }
   });
+  function makeStandaloneChunk(rawBytes, initRef) {
+    if (!initRef.current) {
+      initRef.current = rawBytes;
+      return rawBytes;
+    }
+    const combined = new Uint8Array(initRef.current.length + rawBytes.length);
+    combined.set(initRef.current, 0);
+    combined.set(rawBytes, initRef.current.length);
+    return combined;
+  }
   async function startCapture(streamId) {
     stopCapture();
+    audioInitSegment = null;
+    videoInitSegment = null;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
@@ -56,11 +70,15 @@
         }
         log(`Starting audio recorder using MIME: ${audioMime}`);
         audioRecorder = new MediaRecorder(audioStream, { mimeType: audioMime });
+        const audioInitRef = { current: null };
         audioRecorder.ondataavailable = async (event) => {
           if (event.data && event.data.size > 0) {
             try {
               const buffer = await event.data.arrayBuffer();
-              const byteArray = Array.from(new Uint8Array(buffer));
+              const raw = new Uint8Array(buffer);
+              const standalone = makeStandaloneChunk(raw, audioInitRef);
+              audioInitSegment = audioInitRef.current;
+              const byteArray = Array.from(standalone);
               chrome.runtime.sendMessage({
                 type: "AUDIO_CHUNK",
                 timestamp: Date.now(),
@@ -75,7 +93,7 @@
         audioRecorder.onerror = (errEvent) => {
           log(`Audio recorder error: ${errEvent.error?.message || errEvent.message}`, "ERROR");
         };
-        audioRecorder.start(250);
+        audioRecorder.start(500);
       } else {
         log("No audio tracks found in stream.", "WARN");
       }
@@ -87,11 +105,15 @@
         }
         log(`Starting video recorder using MIME: ${videoMime}`);
         videoRecorder = new MediaRecorder(videoStream, { mimeType: videoMime });
+        const videoInitRef = { current: null };
         videoRecorder.ondataavailable = async (event) => {
           if (event.data && event.data.size > 0) {
             try {
               const buffer = await event.data.arrayBuffer();
-              const byteArray = Array.from(new Uint8Array(buffer));
+              const raw = new Uint8Array(buffer);
+              const standalone = makeStandaloneChunk(raw, videoInitRef);
+              videoInitSegment = videoInitRef.current;
+              const byteArray = Array.from(standalone);
               chrome.runtime.sendMessage({
                 type: "VIDEO_CHUNK",
                 timestamp: Date.now(),
@@ -106,7 +128,7 @@
         videoRecorder.onerror = (errEvent) => {
           log(`Video recorder error: ${errEvent.error?.message || errEvent.message}`, "ERROR");
         };
-        videoRecorder.start(250);
+        videoRecorder.start(1e3);
       } else {
         log("No video tracks found in stream.", "WARN");
       }
@@ -136,11 +158,11 @@
       videoRecorder = null;
     }
     if (activeStream) {
-      activeStream.getTracks().forEach((track) => {
-        track.stop();
-      });
+      activeStream.getTracks().forEach((track) => track.stop());
       activeStream = null;
     }
+    audioInitSegment = null;
+    videoInitSegment = null;
     log("Tab capture stopped and tracks cleaned up.");
   }
 })();

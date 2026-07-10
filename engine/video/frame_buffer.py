@@ -18,6 +18,14 @@ class VideoFrameBuffer:
   def add_chunk(self, chunk: VideoChunk):
     """Adds a new video chunk to the buffer."""
     idx = chunk.chunk_index
+
+    # Bootstrap: on the very first chunk, align expected_index to its actual index.
+    # This handles sessions where the MeetingStore file counter continues from a
+    # previous run (e.g. chunk 191 arriving when buffer expects 1).
+    if not self.pending_chunks and idx > self.expected_index:
+      logger.info(f"Bootstrapping video expected_index to {idx} from first received chunk")
+      self.expected_index = idx
+
     if idx < self.expected_index:
       logger.warning(f"Discarding late video chunk {idx} (expected >= {self.expected_index})")
       return

@@ -22,10 +22,18 @@ export const useLiveStore = create<LiveState>((set) => ({
   setConnectionStatus: (status) => set({ isConnected: status }),
   setMeetingId: (id) => set({ meetingId: id }),
   updateLiveState: (data) =>
-    set((state) => ({
-      ranking: data.ranking || state.ranking,
-      participants: data.participants || state.participants,
-    })),
+    set((state) => {
+      // Deep-merge participants so per-field updates don't wipe other fields
+      const incoming = data.participants ?? {};
+      const merged: Record<string, any> = { ...state.participants };
+      for (const [pid, pstate] of Object.entries(incoming)) {
+        merged[pid] = { ...(merged[pid] ?? {}), ...(pstate as any) };
+      }
+      return {
+        ranking: data.ranking ?? state.ranking,
+        participants: Object.keys(incoming).length > 0 ? merged : state.participants,
+      };
+    }),
   addLog: (log) =>
     set((state) => ({
       logs: [...state.logs, log].slice(-100), // Keep last 100 logs

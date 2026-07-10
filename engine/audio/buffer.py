@@ -11,8 +11,8 @@ class AudioBuffer:
 
   def __init__(self, window_size_ms: int = audio_config.BUFFER_WINDOW_SIZE_MS):
     self.window_size_ms = window_size_ms
-    # 250ms per chunk (Chrome Extension records 250ms chunks)
-    self.chunk_duration_ms = 250
+    # 500ms per chunk (Chrome Extension records 500ms audio chunks)
+    self.chunk_duration_ms = 500
     self.chunks_per_window = max(1, window_size_ms // self.chunk_duration_ms)
     
     # Store pending chunks by index: {index: AudioChunk}
@@ -23,6 +23,14 @@ class AudioBuffer:
   def add_chunk(self, chunk: AudioChunk):
     """Add a new audio chunk to the buffer."""
     idx = chunk.chunk_index
+
+    # Bootstrap: on the very first chunk, align expected_index to its actual index.
+    # This handles sessions where the MeetingStore file counter continues from a
+    # previous run (e.g. chunk 191 arriving when buffer expects 1).
+    if not self.pending_chunks and idx > self.expected_index:
+      logger.info(f"Bootstrapping audio expected_index to {idx} from first received chunk")
+      self.expected_index = idx
+
     if idx < self.expected_index:
       logger.warning(f"Discarding late chunk {idx} (expected >= {self.expected_index})")
       return
