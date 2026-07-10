@@ -34,19 +34,24 @@ async def upload_interview_video(
         raise HTTPException(status_code=400, detail="No video file provided.")
         
     meta_obj = None
+    raw_meta_dict = {}
     participants_list = []
     transcript_list = []
     
     try:
         if metadata:
-            meta_dict = json.loads(metadata)
-            meta_obj = InterviewMetadata(**meta_dict)
+            raw_meta_dict = json.loads(metadata)  # preserve raw dict BEFORE Pydantic
+            # Try to build the Pydantic model but catch extra-field errors gracefully
+            try:
+                meta_obj = InterviewMetadata(**raw_meta_dict)
+            except (ValidationError, TypeError):
+                meta_obj = None  # raw_meta_dict is sufficient
             
         if participants:
             part_list_raw = json.loads(participants)
             if not isinstance(part_list_raw, list):
                 raise ValueError("participants must be a JSON array")
-            participants_list = [ParticipantInfo(**p) for p in part_list_raw]
+            participants_list = [ParticipantInfo(**p) for p in part_list_raw if p.get("participant_id")]
             
         if transcript:
             trans_list_raw = json.loads(transcript)
@@ -68,21 +73,20 @@ async def upload_interview_video(
     with open(filepath, "wb") as buffer:
         shutil.copyfileobj(video.file, buffer)
         
-    # Start background task
+    # Start background task — pass raw_metadata so nothing is lost to Pydantic filtering
     processor = OfflineVideoProcessor(
         meeting_id=meeting_id, 
         filepath=filepath, 
         metadata=meta_obj,
         participants=participants_list,
-        transcript=transcript_list
+        transcript=transcript_list,
+        raw_metadata=raw_meta_dict,
     )
     
-    # We must run processor.process in a new event loop or using asyncio.create_task since 
-    # it's async and background_tasks expects async funcs to run properly.
-    # FastAPI's BackgroundTasks automatically handles async functions.
     background_tasks.add_task(processor.process)
     
     return OfflineUploadResponse(meeting_id=meeting_id, status="processing")
+
 
 @router.get("/{meeting_id}/status")
 async def get_processing_status(meeting_id: str):

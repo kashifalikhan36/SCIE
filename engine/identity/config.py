@@ -61,9 +61,8 @@ class IdentityEngineSettings(BaseSettings):
   HISTORY_MAX_LENGTH: int = 100
 
   model_config = SettingsConfigDict(
-      env_prefix="IDENTITY_",
-      case_sensitive=True,
       env_file=".env",
+      case_sensitive=False,
       extra="ignore"
   )
 

@@ -5,20 +5,45 @@ from typing import Tuple
 logger = logging.getLogger("SCIE.audio_engine.utils")
 
 def decode_chunks_to_pcm(chunk_data_list: list) -> bytes:
+    """Decode a list of WebM/Opus audio chunk bytes to raw 16kHz 16-bit mono PCM."""
     import subprocess
+    import os
     import imageio_ffmpeg
     ffmpeg_exe = imageio_ffmpeg.get_ffmpeg_exe()
     
+    kwargs = {}
+    if os.name == 'nt':
+        kwargs['creationflags'] = subprocess.CREATE_NO_WINDOW
+    
     all_pcm = b""
     for chunk_bytes in chunk_data_list:
-        process = subprocess.Popen(
-            [ffmpeg_exe, '-f', 'webm', '-i', 'pipe:0',
-             '-f', 's16le', '-ac', '1', '-ar', '16000', 'pipe:1'],
-            stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL
-        )
-        pcm, _ = process.communicate(input=chunk_bytes)
-        if pcm:
-            all_pcm += pcm
+        if not chunk_bytes:
+            continue
+        try:
+            process = subprocess.Popen(
+                [
+                    ffmpeg_exe,
+                    "-hide_banner", "-loglevel", "error",
+                    "-f", "webm",        # explicitly tell ffmpeg the container
+                    "-i", "pipe:0",
+                    "-vn",               # drop video if any
+                    "-f", "s16le",       # raw signed 16-bit little-endian PCM
+                    "-ac", "1",          # mono
+                    "-ar", "16000",      # 16kHz (Azure Speech requirement)
+                    "pipe:1"
+                ],
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                **kwargs
+            )
+            pcm, stderr = process.communicate(input=chunk_bytes)
+            if pcm and len(pcm) > 0:
+                all_pcm += pcm
+            elif stderr:
+                logger.warning(f"FFmpeg decode stderr: {stderr.decode('utf-8', errors='ignore')[:200]}")
+        except Exception as e:
+            logger.error(f"Failed to decode audio chunk: {e}")
     return all_pcm
 
 def read_audio_file(file_path: str, target_sr: int = 16000) -> Tuple[bytes, int]:

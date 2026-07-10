@@ -53,9 +53,8 @@ class AudioEnginePipeline:
     chunk_bytes_list = [c.data for c in chunks]
     combined_audio = decode_chunks_to_pcm(chunk_bytes_list)
     
-    # Each chunk represents 500ms (0.5 seconds)
-    duration_sec = len(chunks) * 0.5
-
+    # Calculate actual duration based on PCM byte length (16kHz 16-bit mono = 32000 bytes/sec)
+    duration_sec = len(combined_audio) / 32000.0
     logger.info(f"Processing '{stream_name}' audio pipeline window for meeting {meeting_id} with {len(chunks)} chunks ({duration_sec}s of audio)")
 
     if not combined_audio:
@@ -95,13 +94,27 @@ class AudioEnginePipeline:
             recognition_res.matched_speaker_id = "you"
             recognition_res.speaker_label = "you"
 
-        # 5. Stage: Speech To Text — pass valid PCM combined audio.
-        transcript_res = await self.transcriber.transcribe(
-            combined_audio,
-            diarized_seg,
-            recognition_res.matched_speaker_id
-        )
+        # 5. Stage: Speech To Text
+        # Extract just the audio for this specific segment (16kHz 16-bit mono = 32000 bytes/sec)
+        start_byte = int(diarized_seg.start * 32000)
+        end_byte = int(diarized_seg.end * 32000)
+        segment_audio = combined_audio[start_byte:end_byte]
 
+        # Skip transcription if the segment is extremely short (<0.5s) to avoid API rate limits and "NoMatch" errors
+        if (diarized_seg.end - diarized_seg.start) < 0.5:
+            transcript_res = TranscriptSegment(
+                speaker_id=recognition_res.matched_speaker_id,
+                text="",
+                start=diarized_seg.start,
+                end=diarized_seg.end,
+                is_final=True
+            )
+        else:
+            transcript_res = await self.transcriber.transcribe(
+                segment_audio,
+                diarized_seg,
+                recognition_res.matched_speaker_id
+            )
         # 6. Stage: Language Detection
         lang_res = await self.lang_detector.detect_language(combined_audio)
 

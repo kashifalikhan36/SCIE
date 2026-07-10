@@ -27,7 +27,7 @@ export default function ProcessingPage() {
 
     const connect = () => {
       // Connect to the dashboard WebSocket
-      ws = new WebSocket(`ws://127.0.0.1:8000/api/v1/ws/dashboard/${meetingId}`);
+      ws = new WebSocket(`ws://127.0.0.1:8000/ws/dashboard/${meetingId}`);
 
       ws.onopen = () => {
         setStatus((prev: any) => ({

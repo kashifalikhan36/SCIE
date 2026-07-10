@@ -2,7 +2,11 @@ import os
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class AudioEngineSettings(BaseSettings):
-  # API key for Azure Speech
+  # ── Groq Whisper (Transcription) ───────────────────────────────────────────
+  GROQ_API_KEY: str = ""
+  GROQ_AUDIO_MODEL: str = "whisper-large-v3"
+
+  # ── Azure OpenAI (Embeddings / Semantic matching) ──────────────────────────
   AZURE_OPENAI_API_KEY: str = ""
   AZURE_OPENAI_ENDPOINT: str = ""
   
@@ -17,8 +21,8 @@ class AudioEngineSettings(BaseSettings):
   SPEAKER_SIMILARITY_THRESHOLD: float = 0.75 # Cosine similarity threshold
   
   # Audio Stream Buffer Configuration
-  # Increased to 3000ms to give Azure Speech enough context for recognize_once()
-  BUFFER_WINDOW_SIZE_MS: int = 3000 
+  # 30000ms = 30s to match offline processing chunk size (1 chunk = 1 window = 1 Azure Speech call)
+  BUFFER_WINDOW_SIZE_MS: int = 30000
   BUFFER_MAX_GAP_MS: int = 500 # max allowed chunk gap in ms
 
   # Worker Thread / Pipeline Queue Configuration

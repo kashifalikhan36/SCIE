@@ -20,7 +20,7 @@ class AudioBuffer:
 
     # Store pending chunks by index: {index: AudioChunk}
     self.pending_chunks: Dict[int, AudioChunk] = {}
-    self.expected_index = 1
+    self.expected_index = 0  # chunks are 0-indexed
     self.max_gap_chunks = max(4, self.chunks_per_window * 2)
 
   def add_chunk(self, chunk: AudioChunk):
@@ -34,9 +34,13 @@ class AudioBuffer:
           self._last_chunk_index is not None and
           idx == self._last_chunk_index + 1):
         delta_ms = abs(chunk.timestamp - self._last_chunk_timestamp)
-        if 100 <= delta_ms <= 2000:  # sanity-check: between 100ms and 2s
+        if 10 <= delta_ms <= 60000:  # support both live (250ms) and offline (30000ms) chunks
           self.chunk_duration_ms = delta_ms
-          self.chunks_per_window = max(1, self.window_size_ms // self.chunk_duration_ms)
+          # For large chunks (>=5s), process 1 chunk per window so Azure Speech isn't starved
+          if delta_ms >= 5000:
+            self.chunks_per_window = 1
+          else:
+            self.chunks_per_window = max(1, self.window_size_ms // self.chunk_duration_ms)
           self.max_gap_chunks = max(4, self.chunks_per_window * 2)
           self._calibrated = True
           logger.info(f"Audio buffer calibrated: chunk_duration={delta_ms}ms, chunks_per_window={self.chunks_per_window}")
@@ -114,7 +118,7 @@ class AudioBuffer:
   def clear(self):
     """Resets the buffer state."""
     self.pending_chunks.clear()
-    self.expected_index = 1
+    self.expected_index = 0  # chunks are 0-indexed
     self._last_chunk_timestamp = None
     self._last_chunk_index = None
     self._calibrated = False
