@@ -23,6 +23,26 @@ async def get_all_meetings(limit: int = 100):
     meetings = await cursor.to_list(length=limit)
     return meetings
 
+@router.delete("/meetings/{meeting_id}")
+async def delete_meeting(meeting_id: str):
+    """Delete a specific meeting and its associated data."""
+    db = get_mongo_db()
+    if db is None:
+        raise HTTPException(status_code=503, detail="Database not available")
+    
+    # Delete from main collections
+    result = await db[MONGO_MEETINGS_COL].delete_one({"meeting_id": meeting_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Meeting not found")
+        
+    await db[MONGO_PARTICIPANT_STATES_COL].delete_many({"meeting_id": meeting_id})
+    await db[MONGO_CONFIDENCE_HISTORY_COL].delete_many({"meeting_id": meeting_id})
+    await db[MONGO_FUSION_EVENTS_COL].delete_many({"meeting_id": meeting_id})
+    await db[MONGO_RANKING_HISTORY_COL].delete_many({"meeting_id": meeting_id})
+    await db[MONGO_EXPLANATIONS_COL].delete_many({"meeting_id": meeting_id})
+    
+    return {"status": "success", "message": f"Meeting {meeting_id} deleted."}
+
 @router.get("/meetings/{meeting_id}")
 async def get_meeting_summary(meeting_id: str):
     """Get metadata for a specific meeting."""
@@ -41,9 +61,17 @@ async def get_meeting_summary(meeting_id: str):
         sort=[("snapshot_timestamp", -1)]
     )
     
+    # Get latest explanation
+    latest_explanation = await db[MONGO_EXPLANATIONS_COL].find_one(
+        {"meeting_id": meeting_id},
+        {"_id": 0},
+        sort=[("timestamp", -1)]
+    )
+    
     return {
         "meeting": meeting,
-        "latest_ranking": latest_ranking
+        "latest_ranking": latest_ranking,
+        "latest_explanation": latest_explanation
     }
 
 @router.get("/meetings/{meeting_id}/participants")

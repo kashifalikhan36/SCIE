@@ -43,22 +43,29 @@ class DashboardConnectionManager:
         """Background task that polls Redis and broadcasts state to connected clients."""
         try:
             while True:
-                # 1. Get Ranking
-                ranking = await fusion_state_manager.get_latest_ranking(meeting_id)
+                from database.redis import get_redis
+                redis_client = await get_redis()
+                status_str = await redis_client.get(f"offline_status:{meeting_id}")
                 
-                # 2. Get Participants
-                participants = await fusion_state_manager.get_all_participant_states(meeting_id)
-                
-                # We could also fetch recent events from MongoDB if needed, but for now Redis state is enough
-                # Prepare payload
-                payload = {
-                    "type": "live_state_update",
-                    "meeting_id": meeting_id,
-                    "data": {
-                        "ranking": ranking.model_dump() if ranking else None,
-                        "participants": {pid: state.model_dump() for pid, state in participants.items()}
+                if status_str:
+                    status_data = json.loads(status_str)
+                    payload = {
+                        "type": "progress",
+                        "meeting_id": meeting_id,
+                        "data": status_data
                     }
-                }
+                else:
+                    payload = {
+                        "type": "progress",
+                        "meeting_id": meeting_id,
+                        "data": {
+                            "status": "Waiting for processing to start...",
+                            "progress": 0,
+                            "estimated_time_remaining": "Calculating...",
+                            "logs": ["[INFO] Waiting for processing engine..."],
+                            "stats": {}
+                        }
+                    }
                 
                 message = json.dumps(payload)
                 

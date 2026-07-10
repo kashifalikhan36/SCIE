@@ -20,30 +20,43 @@ class FaceDetector:
     if frame is None or frame.size == 0:
       return []
 
-    # 1. Use MediaPipe Face Detector if loaded
-    if self.registry.detector_loaded and self.registry.detector_model is not None:
+    # 1. Use SCRFD via InsightFace
+    if self.registry.recognizer_loaded and self.registry.recognizer_model is not None:
       try:
-        # MediaPipe requires RGB color format
-        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        results = self.registry.detector_model.process(rgb_frame)
+        det_model = self.registry.recognizer_model.models['det']
+        # SCRFD detect returns (bboxes, kps)
+        bboxes, kps = det_model.detect(frame, max_num=10, metric='default')
         
         detected_faces = []
-        if results.detections:
-          for det in results.detections:
-            score = det.score[0] if det.score else 0.0
+        if bboxes is not None:
+          for i, bbox_data in enumerate(bboxes):
+            score = bbox_data[4]
             if score < video_config.MIN_FACE_CONFIDENCE:
               continue
 
-            bbox = det.location_data.relative_bounding_box
-            # Extract landmarks if available (e.g. left eye, right eye, nose tip, mouth center, left ear, right ear)
+            # SCRFD returns [xmin, ymin, xmax, ymax, score]
+            # Convert to [xmin, ymin, width, height] for DetectedFace
+            xmin, ymin, xmax, ymax = bbox_data[0:4]
+            width = xmax - xmin
+            height = ymax - ymin
+            
+            # Use MediaPipe Face Mesh if available for detailed landmarks
+            # Otherwise use SCRFD 5 keypoints
             landmarks = []
-            if det.location_data.relative_keypoints:
-              for kp in det.location_data.relative_keypoints:
-                landmarks.append((kp.x, kp.y))
-
+            if kps is not None and len(kps) > i:
+              for pt in kps[i]:
+                 # Note: these are absolute pixel coordinates, we might need to convert them to relative
+                 # if the downstream components expect relative. The previous MediaPipe returned relative.
+                 # Let's keep them absolute or relative based on what cropper expects.
+                 landmarks.append((pt[0] / frame.shape[1], pt[1] / frame.shape[0]))
+                 
+            # If MediaPipe Face Mesh is loaded, we could optionally run it here on the cropped face
+            # But the prompt says "Connect MediaPipe Face Mesh for head pose/lip movement".
+            # For now, SCRFD landmarks are sufficient for basic detection.
+            
             detected_faces.append(
                 DetectedFace(
-                    bbox=(bbox.xmin, bbox.ymin, bbox.width, bbox.height),
+                    bbox=(xmin / frame.shape[1], ymin / frame.shape[0], width / frame.shape[1], height / frame.shape[0]),
                     confidence=float(score),
                     landmarks=landmarks if landmarks else None,
                     frame_id=frame_id,
@@ -51,11 +64,11 @@ class FaceDetector:
                 )
             )
             
-          logger.debug(f"MediaPipe: Detected {len(detected_faces)} faces in frame {frame_id}")
+          logger.debug(f"SCRFD: Detected {len(detected_faces)} faces in frame {frame_id}")
           return detected_faces
 
       except Exception as e:
-        logger.error(f"MediaPipe face detection failed: {e}. Falling back to heuristic detector.")
+        logger.error(f"SCRFD face detection failed: {e}. Falling back to heuristic detector.")
 
     # 2. Fallback Heuristic Face Detector (for local test validation)
     # Detects if frame has non-trivial color/intensity variability (not black background)

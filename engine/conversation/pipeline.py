@@ -102,6 +102,21 @@ class ConversationPipeline:
           speaker_count=len(states)
       )
 
+      # 8. Enqueue to FusionEngine
+      try:
+          from engine.fusion.workers import enqueue_fusion_evidence
+          from engine.fusion.constants import DOMAIN_CONVERSATION
+          for ev in evidence_list:
+              await enqueue_fusion_evidence(
+                  evidence_obj=ev,
+                  source_type=DOMAIN_CONVERSATION,
+                  speaker_id=ev.speaker_id,
+                  score=ev.score,
+                  reliability=ev.confidence
+              )
+      except Exception as fe:
+          logger.error(f"ConversationPipeline: Failed to enqueue to FusionEngine: {fe}")
+
       logger.info(
           f"ConversationPipeline: Successfully processed {meeting_id} — produced {len(evidence_list)} "
           f"evidence items across {len(states)} speakers."

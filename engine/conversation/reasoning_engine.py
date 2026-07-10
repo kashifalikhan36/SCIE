@@ -80,7 +80,8 @@ class ConversationReasoningEngine:
                   score=float(item.get("score", 0.0)),
                   confidence=float(item.get("confidence", 0.0)),
                   reason=str(item.get("reason", "No justification provided.")),
-                  supporting_quotes=item.get("supporting_quotes", []) if isinstance(item.get("supporting_quotes"), list) else []
+                  supporting_quotes=item.get("supporting_quotes", []) if isinstance(item.get("supporting_quotes"), list) else [],
+                  extracted_name=item.get("extracted_name")
               )
           )
 

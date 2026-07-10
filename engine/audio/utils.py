@@ -4,6 +4,23 @@ from typing import Tuple
 
 logger = logging.getLogger("SCIE.audio_engine.utils")
 
+def decode_chunks_to_pcm(chunk_data_list: list) -> bytes:
+    import subprocess
+    import imageio_ffmpeg
+    ffmpeg_exe = imageio_ffmpeg.get_ffmpeg_exe()
+    
+    all_pcm = b""
+    for chunk_bytes in chunk_data_list:
+        process = subprocess.Popen(
+            [ffmpeg_exe, '-f', 'webm', '-i', 'pipe:0',
+             '-f', 's16le', '-ac', '1', '-ar', '16000', 'pipe:1'],
+            stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL
+        )
+        pcm, _ = process.communicate(input=chunk_bytes)
+        if pcm:
+            all_pcm += pcm
+    return all_pcm
+
 def read_audio_file(file_path: str, target_sr: int = 16000) -> Tuple[bytes, int]:
   """Reads an audio file and returns its bytes and sample rate.
   

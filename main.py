@@ -1,11 +1,15 @@
 import uvicorn
 import asyncio
+import sys
+
+if sys.platform == 'win32':
+    asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
+
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from core.config import settings
 from api.v1.api import api_router
-from websocket.manager import manager
 from database.mongodb import MongoClientManager
 from database.redis import RedisClientManager
 
@@ -22,7 +26,6 @@ async def lifespan(app: FastAPI):
   asyncio.create_task(mongo_manager.check_connection())
   asyncio.create_task(redis_manager.check_connection())
 
-  # Initialize and start background Audio, Video, and Transcript Engine workers
   from engine.audio import AudioEngineWorkerManager
   audio_worker_manager = AudioEngineWorkerManager.get_instance()
   audio_worker_manager.start()
@@ -35,12 +38,32 @@ async def lifespan(app: FastAPI):
   transcript_worker_manager = TranscriptEngineWorkerManager.get_instance()
   transcript_worker_manager.start()
   
+  from engine.identity.workers import IdentityWorkerManager
+  identity_worker_manager = IdentityWorkerManager.get_instance()
+  identity_worker_manager.start()
+
+  from engine.conversation.workers import ConversationWorkerManager
+  conversation_worker_manager = ConversationWorkerManager.get_instance()
+  conversation_worker_manager.start()
+
+  from engine.behavior.workers import BehaviorWorkerManager
+  behavior_worker_manager = BehaviorWorkerManager.get_instance()
+  behavior_worker_manager.start()
+
+  from engine.fusion.workers import FusionWorkerManager
+  fusion_worker_manager = FusionWorkerManager.get_instance()
+  fusion_worker_manager.start()
+  
   yield
   
   # Shutdown: Close database connections gracefully and stop background workers
   await audio_worker_manager.stop()
   await video_worker_manager.stop()
   await transcript_worker_manager.stop()
+  await identity_worker_manager.stop()
+  await conversation_worker_manager.stop()
+  await behavior_worker_manager.stop()
+  await fusion_worker_manager.stop()
   await mongo_manager.close()
   await redis_manager.close()
 
@@ -67,12 +90,6 @@ def read_root():
   return {"status": "running", "project": settings.PROJECT_NAME}
 
 from websocket.dashboard_manager import dashboard_manager
-
-# WebSocket endpoint for real-time Chrome Extension streaming ingestion
-@app.websocket("/ws/meeting")
-async def websocket_endpoint(websocket: WebSocket):
-  client_id = f"{websocket.client.host}:{websocket.client.port}"
-  await manager.handle_client(websocket, client_id)
 
 # WebSocket endpoint for real-time Dashboard updates
 @app.websocket("/ws/dashboard/{meeting_id}")

@@ -16,11 +16,13 @@ export default function MeetingSummaryPage() {
   const { data: summary, isLoading: loadingSummary } = useQuery({
     queryKey: ["meeting", id],
     queryFn: () => fetchMeetingSummary(id),
+    refetchInterval: 5000,
   });
 
   const { data: participants, isLoading: loadingParticipants } = useQuery({
     queryKey: ["meeting", id, "participants"],
     queryFn: () => fetchMeetingParticipants(id),
+    refetchInterval: 5000,
   });
 
   if (loadingSummary) {
@@ -31,8 +33,8 @@ export default function MeetingSummaryPage() {
     return <div className="p-20 text-center text-destructive">Failed to load meeting summary.</div>;
   }
 
-  const { meeting, latest_ranking } = summary;
-  const topCandidate = latest_ranking?.ranked_participants?.[0];
+  const { meeting, latest_ranking, latest_explanation } = summary;
+  const topCandidate = latest_ranking?.ranked_participants?.[0] || latest_ranking?.ranking?.[0]?.participant_id;
 
   return (
     <div className="flex flex-col gap-6 max-w-7xl mx-auto">
@@ -86,25 +88,56 @@ export default function MeetingSummaryPage() {
              <CardHeader>
                <CardTitle>Final Identification Result</CardTitle>
              </CardHeader>
-             <CardContent className="flex items-center gap-6">
-                <Avatar className="h-20 w-20 border-2 border-primary">
-                  <AvatarFallback className="text-2xl bg-primary/10 text-primary">
-                    {topCandidate ? topCandidate.substring(0, 2).toUpperCase() : "?"}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <h2 className="text-3xl font-bold">{topCandidate ? topCandidate.replace("_", " ") : "Undetermined"}</h2>
-                  <div className="flex items-center gap-2 mt-2">
-                    <Badge variant="outline" className="border-primary/30 text-primary bg-primary/10">Rank #1</Badge>
-                    <span className="text-sm text-muted-foreground font-mono">{topCandidate}</span>
+             <CardContent className="flex flex-col gap-6">
+                <div className="flex items-center gap-6">
+                  <Avatar className="h-20 w-20 border-2 border-primary">
+                    <AvatarFallback className="text-2xl bg-primary/10 text-primary">
+                      {topCandidate ? topCandidate.substring(0, 2).toUpperCase() : "?"}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <h2 className="text-3xl font-bold">{topCandidate ? topCandidate.replace("_", " ") : "Undetermined"}</h2>
+                    <div className="flex items-center gap-2 mt-2">
+                      <Badge variant="outline" className="border-primary/30 text-primary bg-primary/10">Rank #1</Badge>
+                      <span className="text-sm text-muted-foreground font-mono">{topCandidate}</span>
+                    </div>
+                  </div>
+                  <div className="ml-auto text-right">
+                    <div className="text-sm font-medium text-muted-foreground mb-1">Final Confidence</div>
+                    <div className="text-5xl font-bold tracking-tighter text-primary">
+                      {latest_ranking?.confidence ? (latest_ranking.confidence * 100).toFixed(1) : "0"}%
+                    </div>
                   </div>
                 </div>
-                <div className="ml-auto text-right">
-                  <div className="text-sm font-medium text-muted-foreground mb-1">Final Confidence</div>
-                  <div className="text-5xl font-bold tracking-tighter text-primary">
-                    {latest_ranking?.confidence ? (latest_ranking.confidence * 100).toFixed(1) : "0"}%
+
+                {latest_explanation && (
+                  <div className="mt-4 pt-6 border-t border-border/40 grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <h3 className="text-sm font-semibold text-green-500 mb-3 flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-green-500" /> Key Strengths
+                      </h3>
+                      <ul className="space-y-2">
+                        {latest_explanation.key_strengths?.length > 0 ? latest_explanation.key_strengths.map((str: string, i: number) => (
+                          <li key={i} className="text-sm text-muted-foreground bg-green-500/10 px-3 py-2 rounded-md border border-green-500/20">
+                            {str}
+                          </li>
+                        )) : <li className="text-sm text-muted-foreground">No strengths identified yet.</li>}
+                      </ul>
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-semibold text-amber-500 mb-3 flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-amber-500" /> Missing / Ambiguous Information
+                      </h3>
+                      <ul className="space-y-2">
+                        {latest_explanation.key_gaps?.length > 0 ? latest_explanation.key_gaps.map((gap: string, i: number) => (
+                          <li key={i} className="text-sm text-muted-foreground bg-amber-500/10 px-3 py-2 rounded-md border border-amber-500/20">
+                            {gap}
+                          </li>
+                        )) : <li className="text-sm text-muted-foreground">No gaps identified.</li>}
+                      </ul>
+                    </div>
                   </div>
-                </div>
+                )}
              </CardContent>
           </Card>
 

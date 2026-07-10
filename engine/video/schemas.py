@@ -38,6 +38,8 @@ class VisualEvidence(BaseModel):
   tracking_confidence: float
   visibility: bool
   timestamp: int
+  mesh_landmarks: Optional[List[Tuple[float, float]]] = None
+  head_pose: Optional[Dict[str, float]] = None
 
 class ParticipantVisualState(BaseModel):
   """Live participant identity state cached in Redis."""

@@ -42,44 +42,71 @@ class FaceTracker:
       
     return intersection_area / union_area
 
+  def _update_track(self, track_id: str, face: DetectedFace, timestamp: int):
+    track = self.tracks[track_id]
+    track["bbox"] = face.bbox
+    track["age"] = 0
+    track["last_seen"] = timestamp
+    track["visibility"] = True
+    track["confidence"] = face.confidence
+    track["seen_count"] += 1
+
   def update(self, detected_faces: List[DetectedFace], timestamp: int) -> List[DiarizedTrack]:
-    """Associates detections with active tracks and yields diarized tracks for this frame."""
+    """Associates detections with active tracks using ByteTrack algorithm (two-stage matching)."""
     
-    # 1. Compute IoU matrix between existing tracks and new detections
-    track_ids = list(self.tracks.keys())
-    matched_detections = set()
+    # 1. Split detections into high score and low score
+    high_score_faces = []
+    low_score_faces = []
+    HIGH_SCORE_THRESH = 0.5
+    for idx, face in enumerate(detected_faces):
+        if face.confidence >= HIGH_SCORE_THRESH:
+            high_score_faces.append((idx, face))
+        else:
+            low_score_faces.append((idx, face))
+
+    unmatched_tracks = list(self.tracks.keys())
     matched_tracks = set()
+    matched_detections = set()
 
-    associations: List[Tuple[float, str, int]] = [] # list of (iou, track_id, detection_idx)
-
-    for detection_idx, face in enumerate(detected_faces):
-      for track_id in track_ids:
+    # 2. First association: high score detections with existing tracks
+    associations_high = []
+    for det_idx, face in high_score_faces:
+      for track_id in unmatched_tracks:
         track_box = self.tracks[track_id]["bbox"]
         iou = self._calculate_iou(track_box, face.bbox)
-        if iou >= 0.30: # IoU threshold to associate
-          associations.append((iou, track_id, detection_idx))
+        if iou >= 0.30: # Match threshold
+          associations_high.append((iou, track_id, det_idx))
 
-    # Sort associations by highest IoU first
-    associations.sort(key=lambda x: x[0], reverse=True)
-
-    # Greedy matching
-    for iou, track_id, detection_idx in associations:
-      if track_id not in matched_tracks and detection_idx not in matched_detections:
+    # Greedy matching for high scores
+    associations_high.sort(key=lambda x: x[0], reverse=True)
+    for iou, track_id, det_idx in associations_high:
+      if track_id not in matched_tracks and det_idx not in matched_detections:
         matched_tracks.add(track_id)
-        matched_detections.add(detection_idx)
-        
-        # Update existing track state
-        track = self.tracks[track_id]
-        track["bbox"] = detected_faces[detection_idx].bbox
-        track["age"] = 0 # reset missed count
-        track["last_seen"] = timestamp
-        track["visibility"] = True
-        track["confidence"] = detected_faces[detection_idx].confidence
-        track["seen_count"] += 1
+        matched_detections.add(det_idx)
+        self._update_track(track_id, detected_faces[det_idx], timestamp)
+        unmatched_tracks.remove(track_id)
 
-    # 2. Handle unmatched tracks (tracks not seen in this frame)
-    unmatched_tracks = set(track_ids) - matched_tracks
-    for track_id in unmatched_tracks:
+    # 3. Second association: remaining unmatched tracks with low score detections
+    associations_low = []
+    for det_idx, face in low_score_faces:
+      for track_id in unmatched_tracks:
+        # ByteTrack only matches active tracks in the second stage
+        if self.tracks[track_id]["visibility"]:
+          track_box = self.tracks[track_id]["bbox"]
+          iou = self._calculate_iou(track_box, face.bbox)
+          if iou >= 0.40: # Stricter threshold for low score
+            associations_low.append((iou, track_id, det_idx))
+
+    associations_low.sort(key=lambda x: x[0], reverse=True)
+    for iou, track_id, det_idx in associations_low:
+      if track_id not in matched_tracks and det_idx not in matched_detections:
+        matched_tracks.add(track_id)
+        matched_detections.add(det_idx)
+        self._update_track(track_id, detected_faces[det_idx], timestamp)
+        unmatched_tracks.remove(track_id)
+
+    # 4. Handle unmatched tracks (tracks not seen in this frame)
+    for track_id in list(unmatched_tracks):
       track = self.tracks[track_id]
       track["age"] += 1
       track["visibility"] = False
@@ -89,9 +116,9 @@ class FaceTracker:
         logger.info(f"Tracker: Removing stale track {track_id} (inactive for {track['age']} frames)")
         del self.tracks[track_id]
 
-    # 3. Handle unmatched detections (create new tracks)
-    for idx, face in enumerate(detected_faces):
-      if idx not in matched_detections:
+    # 5. Handle unmatched high-score detections (create new tracks)
+    for det_idx, face in high_score_faces:
+      if det_idx not in matched_detections:
         new_track_id = f"Track_{self.track_counter}"
         self.track_counter += 1
         

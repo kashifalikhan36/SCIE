@@ -17,7 +17,9 @@ class VisualEvidenceProvider:
       face: DetectedFace,
       embedding: list,
       similarity: float,
-      rec_confidence: float
+      rec_confidence: float,
+      mesh_landmarks: list = None,
+      head_pose: dict = None
   ) -> VisualEvidence:
     """Assembles all intermediate analysis data frames into a structured VisualEvidence schema instance."""
     
@@ -31,7 +33,9 @@ class VisualEvidenceProvider:
         detection_confidence=face.confidence,
         tracking_confidence=track.confidence,
         visibility=track.visibility,
-        timestamp=face.timestamp
+        timestamp=face.timestamp,
+        mesh_landmarks=mesh_landmarks,
+        head_pose=head_pose
     )
 
     logger.debug(

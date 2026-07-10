@@ -126,7 +126,7 @@ class ParticipantAssociationPipeline:
 
       trans_ev = None
       if isinstance(event_data, TranscriptEvidence):
-        trans_ev = self.transcript_matcher.match(
+        trans_ev = await self.transcript_matcher.match(
             target_name=current_name,
             target_speaker_id=current_speaker,
             transcript_evidence=event_data,

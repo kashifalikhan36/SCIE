@@ -130,7 +130,20 @@ class IdentityWorkerManager:
 
         for attempt in range(identity_config.WORKER_RETRY_COUNT):
           try:
-            await self.pipeline.process(meeting_metadata, participant_metadata)
+            evidence = await self.pipeline.process(meeting_metadata, participant_metadata)
+            if evidence:
+                try:
+                    from engine.fusion.workers import enqueue_fusion_evidence
+                    from engine.fusion.constants import DOMAIN_IDENTITY
+                    await enqueue_fusion_evidence(
+                        evidence_obj=evidence,
+                        source_type=DOMAIN_IDENTITY,
+                        participant_id=evidence.participant_id,
+                        score=evidence.overall_identity_score,
+                        reliability=evidence.confidence
+                    )
+                except Exception as fe:
+                    logger.error(f"IdentityWorker[{worker_id}]: Failed to enqueue to FusionEngine: {fe}")
             success = True
             break
           except Exception as exc:

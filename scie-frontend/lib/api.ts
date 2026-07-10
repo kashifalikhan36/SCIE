@@ -26,6 +26,11 @@ export const fetchMeetings = async () => {
   return data;
 };
 
+export const deleteMeeting = async (meetingId: string) => {
+  const { data } = await api.delete(`/dashboard/meetings/${meetingId}`);
+  return data;
+};
+
 export const fetchMeetingSummary = async (meetingId: string) => {
   const { data } = await api.get(`/dashboard/meetings/${meetingId}`);
   return data;

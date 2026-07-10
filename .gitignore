@@ -15,3 +15,5 @@ env/
 
 # Environment configurations
 .env
+tests\video
+data

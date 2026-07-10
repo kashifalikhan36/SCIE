@@ -35,7 +35,8 @@ SYSTEM_INSTRUCTION_BASE = (
     '      "score": 0.85,\n'
     '      "confidence": 0.90,\n'
     '      "reason": "Detailed justification based on transcript evidence.",\n'
-    '      "supporting_quotes": ["Exact quote from transcript"]\n'
+    '      "supporting_quotes": ["Exact quote from transcript"],\n'
+    '      "extracted_name": "Alex Smith"\n'
     "    }\n"
     "  ]\n"
     "}\n"
@@ -43,7 +44,8 @@ SYSTEM_INSTRUCTION_BASE = (
     "1. Score must be between 0.0 (does not exhibit trait at all) and 1.0 (strongly exhibits trait).\n"
     "2. Confidence must be between 0.0 (very uncertain / insufficient speech) and 1.0 (absolute certainty).\n"
     "3. Include all participating speakers present in the chunk.\n"
-    "4. Return strictly valid JSON object without markdown formatting or introductory text."
+    "4. Return strictly valid JSON object without markdown formatting or introductory text.\n"
+    "5. Use 'extracted_name' ONLY if the prompt asks you to extract a name (e.g. self introductions). Otherwise omit it or set it to null."
 )
 
 
@@ -66,7 +68,9 @@ PROMPT_TEMPLATES: Dict[str, str] = {
         "Analyze the following conversation chunk and determine:\n"
         "**Who is introducing themselves?**\n\n"
         "Look for indicators such as stating one's name, background, career history, "
-        "or current role during the start or transitions of the meeting.\n\n"
+        "or current role during the start or transitions of the meeting.\n"
+        "If a speaker explicitly states their name (e.g. 'Hi, I am Alex' or 'My name is Sarah'), "
+        "extract that name exactly as spoken into the `extracted_name` field.\n\n"
         "Conversation Transcript:\n{transcript}\n"
     ),
     EVIDENCE_EXPERIENCE_DISCUSSION: (

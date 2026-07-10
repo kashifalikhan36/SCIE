@@ -1,7 +1,7 @@
 # Model Constants
 VAD_MODEL_NAME = "pyannote/segmentation-3.0"
 DIARIZATION_MODEL_NAME = "pyannote/speaker-diarization-3.1"
-SPEAKER_RECOGNITION_MODEL_NAME = "speechbrain/spkrec-ecapa-voxceleb"
+SPEAKER_RECOGNITION_MODEL_NAME = "speechbrain/spkrec-resnet-voxceleb"
 LANGUAGE_DETECTION_MODEL_NAME = "speechbrain/lang-id-voxlingua107-ecapa"
 STT_MODEL_NAME = "whisper-large-v3"
 

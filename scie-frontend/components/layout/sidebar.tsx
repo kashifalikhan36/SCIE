@@ -18,11 +18,9 @@ import { cn } from "@/lib/utils";
 
 const navItems = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { name: "Live Interview", href: "/live", icon: Radio },
-  { name: "Interviews", href: "/interviews", icon: History },
+  { name: "Interviews", href: "/interviews", icon: Radio },
+  { name: "History", href: "/history", icon: History },
   { name: "Settings", href: "/settings", icon: Settings },
-  { name: "Logs", href: "/logs", icon: Terminal },
-  { name: "System Health", href: "/health", icon: Activity },
 ];
 
 function NavLinks({ pathname, onClose }: { pathname: string; onClose?: () => void }) {

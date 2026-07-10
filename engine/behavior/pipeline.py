@@ -144,6 +144,20 @@ class BehaviorPipeline:
           timestamp=observation.timestamp
       )
 
+      # 7. Enqueue to FusionEngine
+      try:
+          from engine.fusion.workers import enqueue_fusion_evidence
+          from engine.fusion.constants import DOMAIN_BEHAVIOR
+          await enqueue_fusion_evidence(
+              evidence_obj=evidence,
+              source_type=DOMAIN_BEHAVIOR,
+              participant_id=evidence.participant_id,
+              score=engagement.engagement_score / 100.0,
+              reliability=1.0
+          )
+      except Exception as fe:
+          logger.error(f"BehaviorPipeline: Failed to enqueue to FusionEngine: {fe}")
+
       logger.info(f"Processed behavior for {pid}: engagement={engagement.engagement_level} ({engagement.engagement_score:.2f})")
       return evidence
 

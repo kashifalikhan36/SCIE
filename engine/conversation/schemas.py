@@ -23,6 +23,7 @@ class ConversationEvidence(BaseModel):
   confidence: float = Field(..., ge=0.0, le=1.0, description="Model certainty in the evaluation")
   reason: str = Field(..., description="Semantic justification for the score")
   supporting_quotes: List[str] = Field(default_factory=list, description="Direct utterances supporting the score")
+  extracted_name: Optional[str] = Field(default=None, description="Name extracted if self introduction")
   timestamp: int = Field(default_factory=now_ms, description="Epoch milliseconds of generation")
 
 

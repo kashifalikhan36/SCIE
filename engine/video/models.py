@@ -27,25 +27,33 @@ class ModelRegistry:
     self.load_face_recognizer()
 
   def load_face_detector(self):
-    """Loads MediaPipe Face Detection model."""
+    """Loads SCRFD via InsightFace for face detection, and MediaPipe Face Mesh for pose."""
     if self.detector_loaded:
       return
       
     try:
-      logger.info("Initializing MediaPipe Face Detection model...")
+      logger.info("Initializing SCRFD Face Detection model and MediaPipe Face Mesh...")
+      import insightface
       import mediapipe as mp
-      self.mp_face_detection = mp.solutions.face_detection
       
-      # Instantiate the detector with configuration parameters
-      self.detector_model = self.mp_face_detection.FaceDetection(
+      # SCRFD is part of InsightFace's buffalo_l. We'll load the full app but only use detection if needed,
+      # or just rely on the recognizer_model which loads the same app.
+      # To avoid double-loading, we'll let load_face_recognizer handle InsightFace, 
+      # and here we just load MediaPipe Face Mesh.
+      self.mp_face_mesh = mp.solutions.face_mesh
+      self.face_mesh_model = self.mp_face_mesh.FaceMesh(
+          static_image_mode=False,
+          max_num_faces=10,
+          refine_landmarks=True,
           min_detection_confidence=video_config.MIN_FACE_CONFIDENCE,
-          model_selection=0 # 0 for short-range faces (within 2m), 1 for full range
+          min_tracking_confidence=0.5
       )
+      
       self.detector_loaded = True
-      logger.info("MediaPipe Face Detection model loaded successfully.")
+      logger.info("Face Detector (Mesh) loaded successfully.")
     except Exception as e:
-      logger.warning(f"Could not load MediaPipe Face Detector ({e}). Pipeline will use fallback detector.")
-      self.detector_model = None
+      logger.warning(f"Could not load Face Detector dependencies ({e}).")
+      self.face_mesh_model = None
       self.detector_loaded = False
 
   def load_face_recognizer(self):

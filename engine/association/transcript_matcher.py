@@ -57,7 +57,7 @@ class TranscriptMatcher:
       valid_words.append(w)
     return " ".join(valid_words).strip()
 
-  def match(
+  async def match(
       self,
       target_name: Optional[str],
       target_speaker_id: Optional[str],
@@ -115,18 +115,44 @@ class TranscriptMatcher:
               reasons.append(f"Addressed name pattern detected: '{candidate_name}' (sim={sim:.2f})")
               break
 
-      # 3. Direct substring mention check if neither intro nor addressed pattern caught it
+      # 3. Direct substring mention check
       if not is_self_intro and not is_addressed:
         if clean_target in cleaned_text and len(clean_target) >= 3:
           score = 0.60
           confidence = 0.50
           reasons.append(f"Direct mention of target name '{target_name}' in transcript.")
-        else:
-          return TranscriptMatchEvidence(
-              score=0.0,
-              confidence=0.0,
-              reasons=[f"No conversational introduction or address pattern linking to '{target_name}'."]
-          )
+          
+      # 4. Semantic Transcript Analysis using Azure OpenAI text-embedding-3-large
+      if not is_self_intro and not is_addressed and score < 0.80:
+        from engine.identity.embedding_client import EmbeddingClient
+        from engine.identity.utils import cosine_similarity
+        
+        client = EmbeddingClient.get_instance()
+        
+        # We compare the transcript text against a synthetic reference string
+        reference_text = f"Hello, my name is {target_name} and I am speaking."
+        
+        import asyncio
+        t_emb, ref_emb = await asyncio.gather(
+            client.embed(cleaned_text),
+            client.embed(reference_text)
+        )
+        
+        if t_emb is not None and ref_emb is not None:
+            cos_sim = cosine_similarity(t_emb, ref_emb)
+            # Map [-1, 1] to [0, 1]
+            norm_sim = (cos_sim + 1.0) / 2.0
+            if norm_sim > score and norm_sim > 0.65:
+                score = norm_sim
+                confidence = 0.70
+                reasons.append(f"Semantic transcript analysis matched reference '{reference_text}' (sim={norm_sim:.2f})")
+
+      if score == 0.0:
+        return TranscriptMatchEvidence(
+            score=0.0,
+            confidence=0.0,
+            reasons=[f"No conversational introduction, address pattern, or semantic match linking to '{target_name}'."]
+        )
 
       logger.debug(
           f"TranscriptMatcher: speaker={transcript_evidence.speaker_id}, score={score:.2f}, "

@@ -45,6 +45,7 @@ class ConversationEvidenceProvider:
             confidence=conf,
             reason=eval_item.reason or f"Evaluated for {result.prompt_type}",
             supporting_quotes=eval_item.supporting_quotes or [],
+            extracted_name=getattr(eval_item, "extracted_name", None),
             timestamp=now_ms()
         )
         evidence_list.append(ev)

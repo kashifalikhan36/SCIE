@@ -28,6 +28,7 @@ class PromptEvaluationItem:
   confidence: float
   reason: str
   supporting_quotes: List[str] = field(default_factory=list)
+  extracted_name: Optional[str] = None
 
 
 @dataclass

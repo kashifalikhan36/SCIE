@@ -17,7 +17,7 @@ class SpeakerRecognizer:
 
   def __init__(self):
     self.registry = ModelRegistry.get_instance()
-    self.embedding_dim = 192 # ECAPA-TDNN standard dimension
+    self.embedding_dim = 256 # WeSpeaker ResNet34 standard dimension
 
   async def recognize(self, meeting_id: str, audio_data: bytes, segment: DiarizedSegment) -> SpeakerRecognitionResult:
     """Generates speaker embedding and checks against stored embeddings in Redis to match identity."""
@@ -52,17 +52,33 @@ class SpeakerRecognizer:
       raise SpeakerRecognitionError(f"Failed speaker recognition processing: {e}")
 
   async def _generate_embedding(self, audio_data: bytes, segment: DiarizedSegment) -> List[float]:
-    """Generates a 192-dimensional embedding vector for the speech segment."""
+    """Generates a 256-dimensional embedding vector for the speech segment."""
     if self.registry.speaker_rec_loaded and self.registry.speaker_recognition_model is not None:
       try:
-        # In a real environment:
-        # 1. Slice the audio_data to start/end timestamps
-        # 2. Convert to torch tensor
-        # 3. Run self.registry.speaker_recognition_model.encode_batch(waveform)
-        # 4. Return the list of floats
+        import torch
+        import numpy as np
         logger.info("Executing SpeechBrain Speaker Recognition model...")
-        # Simulate/Mock actual extraction output from float array
-        return [random.uniform(-0.1, 0.1) for _ in range(self.embedding_dim)]
+        
+        # Calculate byte indices for 16kHz 16-bit mono PCM
+        start_byte = int(segment.start * 16000) * 2
+        end_byte = int(segment.end * 16000) * 2
+        
+        # Ensure we don't go out of bounds
+        end_byte = min(end_byte, len(audio_data))
+        start_byte = min(start_byte, end_byte)
+        
+        segment_audio = audio_data[start_byte:end_byte]
+        
+        if len(segment_audio) < 3200: # Need at least 0.1s of audio
+            logger.warning("Segment too short for embedding, generating fallback.")
+            raise ValueError("Segment too short")
+            
+        np_audio = np.frombuffer(segment_audio, dtype=np.int16)
+        tensor_audio = torch.from_numpy(np_audio.copy()).float() / 32768.0
+        tensor_audio = tensor_audio.unsqueeze(0) # (batch, time)
+        
+        embeddings = self.registry.speaker_recognition_model.encode_batch(tensor_audio)
+        return embeddings.squeeze().tolist()
       except Exception as e:
         logger.error(f"SpeechBrain embedding failed: {e}. Falling back to deterministic mock.")
 

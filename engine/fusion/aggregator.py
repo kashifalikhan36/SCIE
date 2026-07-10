@@ -69,6 +69,8 @@ class EvidenceAggregator:
         display_name = evidence.payload.get("raw_participant_name") or evidence.payload.get("display_name")
         if display_name:
           state.display_name = str(display_name)
+      elif evidence.source_type == DOMAIN_CONVERSATION and evidence.payload.get("extracted_name"):
+        state.display_name = str(evidence.payload.get("extracted_name"))
 
       # 4. Out-of-order merge logic into specific domain slots
       domain_dict = {

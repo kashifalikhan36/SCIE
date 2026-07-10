@@ -48,15 +48,23 @@ class AudioEnginePipeline:
 
   async def _process_sub_window(self, meeting_id: str, chunks: List[AudioChunk], stream_name: str) -> List[VoiceEvidence]:
     """Internal method to process a homogenous stream of chunks (either all tab or all mic)."""
-    # 1. Combine audio data bytes in this window
-    combined_audio = b"".join(c.data for c in chunks)
+    # 1. Decode WebM chunks to a single continuous PCM byte stream
+    from engine.audio.utils import decode_chunks_to_pcm
+    chunk_bytes_list = [c.data for c in chunks]
+    combined_audio = decode_chunks_to_pcm(chunk_bytes_list)
+    
     # Each chunk represents 500ms (0.5 seconds)
     duration_sec = len(chunks) * 0.5
 
     logger.info(f"Processing '{stream_name}' audio pipeline window for meeting {meeting_id} with {len(chunks)} chunks ({duration_sec}s of audio)")
 
+    if not combined_audio:
+        logger.warning(f"Could not extract PCM audio from {stream_name} chunks.")
+        return []
+
     try:
       # 2. Stage: Voice Activity Detection (VAD)
+      # Pass PCM data to VAD
       speech_segments = await self.vad.detect_speech(combined_audio, duration_sec)
       
       # If no speech is detected, return early
@@ -87,13 +95,11 @@ class AudioEnginePipeline:
             recognition_res.matched_speaker_id = "you"
             recognition_res.speaker_label = "you"
 
-        # 5. Stage: Speech To Text — pass individual chunk bytes so each WebM is
-        # decoded separately (concatenating raw WebM bytes creates invalid multi-header streams)
+        # 5. Stage: Speech To Text — pass valid PCM combined audio.
         transcript_res = await self.transcriber.transcribe(
             combined_audio,
             diarized_seg,
-            recognition_res.matched_speaker_id,
-            chunk_data_list=[c.data for c in chunks]
+            recognition_res.matched_speaker_id
         )
 
         # 6. Stage: Language Detection
@@ -155,6 +161,20 @@ class AudioEnginePipeline:
                 "timestamp": evidence.timestamp
             }
         )
+
+        # Enqueue to FusionEngine
+        try:
+            from engine.fusion.workers import enqueue_fusion_evidence
+            from engine.fusion.constants import DOMAIN_VOICE
+            await enqueue_fusion_evidence(
+                evidence_obj=evidence,
+                source_type=DOMAIN_VOICE,
+                speaker_id=evidence.speaker_id,
+                score=evidence.recognition_confidence,
+                reliability=1.0
+            )
+        except Exception as fe:
+            logger.error(f"Failed to enqueue voice evidence to FusionEngine: {fe}")
 
         collected_evidence.append(evidence)
 

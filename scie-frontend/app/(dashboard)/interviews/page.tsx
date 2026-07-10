@@ -1,18 +1,31 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import { fetchMeetings } from "@/lib/api";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { fetchMeetings, deleteMeeting } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
-import { Loader2, Search, ArrowRight, History } from "lucide-react";
+import { Loader2, Search, ArrowRight, History, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { motion } from "framer-motion";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Upload } from "lucide-react";
 
 export default function InterviewsPage() {
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const queryClient = useQueryClient();
+
   const { data: meetings, isLoading, error } = useQuery({
     queryKey: ["meetings"],
     queryFn: fetchMeetings,
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: deleteMeeting,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["meetings"] });
+    },
   });
 
   return (
@@ -22,13 +35,21 @@ export default function InterviewsPage() {
           <h1 className="text-2xl font-bold tracking-tight">Interview History</h1>
           <p className="text-muted-foreground text-sm">Historical records of all Sherlock AI candidate evaluations</p>
         </div>
-        <div className="relative">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <input
-            type="search"
-            placeholder="Search candidates or IDs..."
-            className="h-9 w-full sm:w-64 rounded-md border border-input bg-background/50 pl-9 pr-4 text-sm ring-offset-background focus:outline-none"
-          />
+        <div className="flex items-center gap-4">
+          <div className="relative">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <input
+              type="search"
+              placeholder="Search candidates or IDs..."
+              className="h-9 w-full sm:w-64 rounded-md border border-input bg-background/50 pl-9 pr-4 text-sm ring-offset-background focus:outline-none"
+            />
+          </div>
+          <Link href="/interviews/upload">
+            <Button className="gap-2">
+              <Upload className="h-4 w-4" />
+              Upload Video
+            </Button>
+          </Link>
         </div>
       </div>
 
@@ -69,7 +90,23 @@ export default function InterviewsPage() {
                   <CardHeader className="pb-3">
                     <CardTitle className="text-lg flex justify-between items-start">
                       <span className="font-mono text-sm">{meeting.meeting_id}</span>
-                      <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                      <div className="flex items-center gap-2">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-all"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            if (confirm('Are you sure you want to delete this meeting?')) {
+                              deleteMutation.mutate(meeting.meeting_id);
+                            }
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                        <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                      </div>
                     </CardTitle>
                     <div className="text-xs text-muted-foreground">
                       {meeting.created_at ? format(new Date(meeting.created_at), "MMM d, yyyy 'at' h:mm a") : "Unknown Date"}

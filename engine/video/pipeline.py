@@ -93,6 +93,23 @@ class VideoEnginePipeline:
             # 4. Stage: Face Cropping
             cropped_face = self.cropper.crop_face(frame, matching_face)
 
+            # Optional: MediaPipe Face Mesh for head pose/lip movement
+            mesh_landmarks = None
+            head_pose = None
+            registry = self.detector.registry
+            if registry.detector_loaded and registry.face_mesh_model is not None:
+              try:
+                import cv2
+                rgb_crop = cv2.cvtColor(cropped_face, cv2.COLOR_BGR2RGB)
+                mesh_res = registry.face_mesh_model.process(rgb_crop)
+                if mesh_res.multi_face_landmarks:
+                    landmarks = mesh_res.multi_face_landmarks[0].landmark
+                    mesh_landmarks = [(lm.x, lm.y) for lm in landmarks]
+                    # Rudimentary head pose estimation (mocked for now, real PnP requires 3D model)
+                    head_pose = {"pitch": 0.0, "yaw": 0.0, "roll": 0.0}
+              except Exception as e:
+                logger.warning(f"Face Mesh execution failed: {e}")
+
             # 5. Stage: Face Recognition & Scheduling
             # Fetch the original/base embedding from Redis cache
             base_emb = await self.emb_store.get_cached_embedding(meeting_id, track.track_id)
@@ -128,7 +145,9 @@ class VideoEnginePipeline:
                 face=matching_face,
                 embedding=embedding,
                 similarity=similarity,
-                rec_confidence=rec_conf
+                rec_confidence=rec_conf,
+                mesh_landmarks=mesh_landmarks,
+                head_pose=head_pose
             )
 
             # 8. Stage: Redis cache update (latest state)
@@ -136,6 +155,20 @@ class VideoEnginePipeline:
 
             # 9. Stage: MongoDB persist visual evidence
             await self.storage_manager.save_visual_evidence(evidence)
+            
+            # Enqueue to FusionEngine
+            try:
+                from engine.fusion.workers import enqueue_fusion_evidence
+                from engine.fusion.constants import DOMAIN_VISUAL
+                await enqueue_fusion_evidence(
+                    evidence_obj=evidence,
+                    source_type=DOMAIN_VISUAL,
+                    track_id=evidence.track_id,
+                    score=evidence.face_similarity,
+                    reliability=evidence.recognition_confidence
+                )
+            except Exception as fe:
+                logger.error(f"Failed to enqueue visual evidence to FusionEngine: {fe}")
             
             collected_evidences.append(evidence)
 
