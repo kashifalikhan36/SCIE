@@ -102,7 +102,7 @@ class ConnectionManager:
             timestamp = header.get("timestamp")
             payload_bytes = binary_data[4+header_len:]
 
-            if not meeting_id or msg_type not in ("audio", "video"):
+            if not meeting_id or msg_type not in ("audio", "mic_audio", "video"):
               print(f"[WebSocket] Invalid binary header content from client {client_id}: {header}")
               continue
 
@@ -115,8 +115,8 @@ class ConnectionManager:
               f"Saved {msg_type} chunk: {filename} ({len(payload_bytes)} bytes)", "INFO"
             )
 
-            # Enqueue to Audio Engine workers if it's an audio chunk
-            if msg_type == "audio":
+            # Enqueue to Audio Engine workers if it's an audio or mic_audio chunk
+            if msg_type in ("audio", "mic_audio"):
               try:
                 chunk_index = int(filename.split(".")[0])
                 from engine.audio import enqueue_audio_chunk, AudioChunk
@@ -125,7 +125,8 @@ class ConnectionManager:
                     timestamp=timestamp,
                     chunk_index=chunk_index,
                     data=payload_bytes,
-                    file_path=str(store.audio_dir / filename)
+                    file_path=str(store.audio_dir / filename),
+                    chunk_type=msg_type
                 )
                 await enqueue_audio_chunk(audio_chunk)
               except Exception as e:

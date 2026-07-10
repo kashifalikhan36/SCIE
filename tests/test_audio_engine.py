@@ -85,12 +85,10 @@ async def test_audio_pipeline_execution():
   # Clear Redis hashes
   await redis_client.delete(f"scie:meeting:{meeting_id}:embeddings")
   
-  # 4 mock chunks with non-zero bytes to satisfy fallback VAD energy-check
+  # 12 mock chunks (3000ms window / 250ms per chunk) with non-zero bytes to satisfy fallback VAD energy-check
   chunks = [
-      AudioChunk(meeting_id=meeting_id, timestamp=1000, chunk_index=1, data=b"\x01\x02\x03\x04" * 1000),
-      AudioChunk(meeting_id=meeting_id, timestamp=1250, chunk_index=2, data=b"\x01\x02\x03\x04" * 1000),
-      AudioChunk(meeting_id=meeting_id, timestamp=1500, chunk_index=3, data=b"\x01\x02\x03\x04" * 1000),
-      AudioChunk(meeting_id=meeting_id, timestamp=1750, chunk_index=4, data=b"\x01\x02\x03\x04" * 1000)
+      AudioChunk(meeting_id=meeting_id, timestamp=1000 + (i * 250), chunk_index=i, data=b"\x01\x02\x03\x04" * 1000)
+      for i in range(1, 13)
   ]
 
   # Run pipeline
@@ -102,7 +100,7 @@ async def test_audio_pipeline_execution():
   assert evidence.meeting_id == meeting_id
   assert evidence.speaker_id is not None
   assert len(evidence.voice_embedding) == 192
-  assert evidence.speech_duration == 1.0 # 4 chunks * 0.25s
+  assert evidence.speech_duration == 3.0 # 12 chunks * 0.25s
   
   # Verify Redis cache has the participant state
   state_key = f"scie:meeting:{meeting_id}:participant:{evidence.speaker_id}:state"
@@ -110,7 +108,7 @@ async def test_audio_pipeline_execution():
   assert redis_val is not None
   state = ParticipantAudioState.model_validate_json(redis_val)
   assert state.speaker_id == evidence.speaker_id
-  assert state.speech_duration == 1.0
+  assert state.speech_duration == 3.0
   
   # Verify MongoDB contains the historical records
   ev_doc = await mongo_db["voice_evidence"].find_one({"meeting_id": meeting_id})
@@ -141,6 +139,8 @@ async def test_audio_pipeline_execution():
 @pytest.mark.asyncio
 async def test_audio_workers_flow():
   """Test the asynchronous background worker queue-processing flow."""
+  # Reset singleton so this test gets a fresh buffer (not polluted by prior tests)
+  AudioEngineWorkerManager._instance = None
   manager = AudioEngineWorkerManager.get_instance()
   manager.start()
   
@@ -150,8 +150,10 @@ async def test_audio_workers_flow():
   mongo_db = get_mongo_db()
   await mongo_db["voice_evidence"].delete_many({"meeting_id": meeting_id})
   
-  # Enqueue 4 chunks to complete a window (window_size = 1s = 4 chunks)
-  for i in range(1, 5):
+  # With BUFFER_WINDOW_SIZE_MS=3000ms and chunk_duration_ms=250ms we need 12 chunks
+  # to fill one processing window.
+  NUM_CHUNKS = 12
+  for i in range(1, NUM_CHUNKS + 1):
     chunk = AudioChunk(
         meeting_id=meeting_id,
         timestamp=1000 + (i * 250),
@@ -160,11 +162,14 @@ async def test_audio_workers_flow():
     )
     await manager.enqueue_chunk(chunk)
   
-  # Allow background worker threads time to process the window
-  await asyncio.sleep(1.0)
-  
-  # Verify if evidence was generated and persisted by the background pipeline
-  ev_doc = await mongo_db["voice_evidence"].find_one({"meeting_id": meeting_id})
+  # Poll until evidence is written or timeout (Azure + mock fallback may take a few seconds)
+  ev_doc = None
+  for _ in range(40):
+    await asyncio.sleep(0.5)
+    ev_doc = await mongo_db["voice_evidence"].find_one({"meeting_id": meeting_id})
+    if ev_doc is not None:
+      break
+      
   assert ev_doc is not None
   
   # Clean up

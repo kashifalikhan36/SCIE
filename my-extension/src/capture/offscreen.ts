@@ -65,7 +65,7 @@ async function startCapture(streamId: string) {
   videoInitSegment = null;
 
   try {
-    // Acquire the media stream for the tab
+    // Acquire the media stream for the tab (tab audio = remote participants)
     const stream = await navigator.mediaDevices.getUserMedia({
       audio: {
         mandatory: {
@@ -82,12 +82,14 @@ async function startCapture(streamId: string) {
     });
 
     activeStream = stream;
-    log(`Successfully acquired tab MediaStream. Audio tracks: ${stream.getAudioTracks().length}, Video tracks: ${stream.getVideoTracks().length}`);
+    log(`Tab MediaStream acquired. Audio: ${stream.getAudioTracks().length}, Video: ${stream.getVideoTracks().length}`);
 
     const audioTracks = stream.getAudioTracks();
     const videoTracks = stream.getVideoTracks();
 
     // ── Audio Recorder ────────────────────────────────────────────────────
+    // NOTE: This captures TAB audio only (remote participants).
+    // The user's microphone is captured separately by the content script.
     if (audioTracks.length > 0) {
       const audioStream = new MediaStream(audioTracks);
       let audioMime = "audio/webm;codecs=opus";
@@ -105,7 +107,6 @@ async function startCapture(streamId: string) {
           try {
             const buffer = await event.data.arrayBuffer();
             const raw = new Uint8Array(buffer);
-            // Prepend EBML header so every chunk is a valid WebM file
             const standalone = makeStandaloneChunk(raw, audioInitRef);
             audioInitSegment = audioInitRef.current;
             const byteArray = Array.from(standalone);
@@ -124,7 +125,7 @@ async function startCapture(streamId: string) {
         log(`Audio recorder error: ${errEvent.error?.message || errEvent.message}`, "ERROR");
       };
 
-      audioRecorder.start(500); // 500ms chunks — gives more data per chunk
+      audioRecorder.start(500); // 500ms chunks
     } else {
       log("No audio tracks found in stream.", "WARN");
     }

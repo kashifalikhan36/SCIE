@@ -59,7 +59,7 @@
         }
       });
       activeStream = stream;
-      log(`Successfully acquired tab MediaStream. Audio tracks: ${stream.getAudioTracks().length}, Video tracks: ${stream.getVideoTracks().length}`);
+      log(`Tab MediaStream acquired. Audio: ${stream.getAudioTracks().length}, Video: ${stream.getVideoTracks().length}`);
       const audioTracks = stream.getAudioTracks();
       const videoTracks = stream.getVideoTracks();
       if (audioTracks.length > 0) {

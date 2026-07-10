@@ -72,11 +72,12 @@ class AudioEngineWorkerManager:
     except Exception as e:
       logger.error(f"Failed to enqueue audio chunk: {e}")
 
-  def _get_buffer(self, meeting_id: str) -> AudioBuffer:
-    """Gets or creates the AudioBuffer associated with the meeting."""
-    if meeting_id not in self.buffers:
-      self.buffers[meeting_id] = AudioBuffer()
-    return self.buffers[meeting_id]
+  def _get_buffer(self, meeting_id: str, chunk_type: str) -> AudioBuffer:
+    """Gets or creates the AudioBuffer associated with the meeting and chunk stream."""
+    key = f"{meeting_id}_{chunk_type}"
+    if key not in self.buffers:
+      self.buffers[key] = AudioBuffer()
+    return self.buffers[key]
 
   async def _worker_loop(self, worker_id: int):
     """Internal loop for processing chunks from the queue."""
@@ -92,7 +93,8 @@ class AudioEngineWorkerManager:
           break
           
         meeting_id = chunk.meeting_id
-        buffer = self._get_buffer(meeting_id)
+        chunk_type = getattr(chunk, "chunk_type", "audio")
+        buffer = self._get_buffer(meeting_id, chunk_type)
         
         # Add chunk to reordering stream buffer
         buffer.add_chunk(chunk)

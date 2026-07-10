@@ -11,10 +11,13 @@ class AudioBuffer:
 
   def __init__(self, window_size_ms: int = audio_config.BUFFER_WINDOW_SIZE_MS):
     self.window_size_ms = window_size_ms
-    # 500ms per chunk (Chrome Extension records 500ms audio chunks)
-    self.chunk_duration_ms = 500
+    # Default chunk duration; auto-calibrated from real chunk timestamps on first two chunks.
+    self.chunk_duration_ms = 250
     self.chunks_per_window = max(1, window_size_ms // self.chunk_duration_ms)
-    
+    self._last_chunk_timestamp: int | None = None
+    self._last_chunk_index: int | None = None
+    self._calibrated = False
+
     # Store pending chunks by index: {index: AudioChunk}
     self.pending_chunks: Dict[int, AudioChunk] = {}
     self.expected_index = 1
@@ -24,10 +27,26 @@ class AudioBuffer:
     """Add a new audio chunk to the buffer."""
     idx = chunk.chunk_index
 
-    # Bootstrap: on the very first chunk, align expected_index to its actual index.
-    # This handles sessions where the MeetingStore file counter continues from a
-    # previous run (e.g. chunk 191 arriving when buffer expects 1).
-    if not self.pending_chunks and idx > self.expected_index:
+    # Auto-calibrate chunk_duration_ms from real chunk timestamps.
+    # Only calibrate when two consecutive sequential chunk indices arrive in order.
+    if not self._calibrated and chunk.timestamp:
+      if (self._last_chunk_timestamp is not None and
+          self._last_chunk_index is not None and
+          idx == self._last_chunk_index + 1):
+        delta_ms = abs(chunk.timestamp - self._last_chunk_timestamp)
+        if 100 <= delta_ms <= 2000:  # sanity-check: between 100ms and 2s
+          self.chunk_duration_ms = delta_ms
+          self.chunks_per_window = max(1, self.window_size_ms // self.chunk_duration_ms)
+          self.max_gap_chunks = max(4, self.chunks_per_window * 2)
+          self._calibrated = True
+          logger.info(f"Audio buffer calibrated: chunk_duration={delta_ms}ms, chunks_per_window={self.chunks_per_window}")
+      self._last_chunk_timestamp = chunk.timestamp
+      self._last_chunk_index = idx
+
+    # Bootstrap: if the buffer is empty and the first chunk's index is far ahead of
+    # expected_index (cross-session gap), snap expected_index to match it so we
+    # don't log hundreds of false gap warnings.
+    if not self.pending_chunks and (idx - self.expected_index) > self.max_gap_chunks:
       logger.info(f"Bootstrapping audio expected_index to {idx} from first received chunk")
       self.expected_index = idx
 
@@ -96,3 +115,9 @@ class AudioBuffer:
     """Resets the buffer state."""
     self.pending_chunks.clear()
     self.expected_index = 1
+    self._last_chunk_timestamp = None
+    self._last_chunk_index = None
+    self._calibrated = False
+    self.chunk_duration_ms = 250
+    self.chunks_per_window = max(1, self.window_size_ms // self.chunk_duration_ms)
+    self.max_gap_chunks = max(4, self.chunks_per_window * 2)

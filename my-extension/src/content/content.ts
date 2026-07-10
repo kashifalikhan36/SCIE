@@ -24,8 +24,12 @@ const observer = new MutationObserver(() => {
 
 if (document.readyState === "complete" || document.readyState === "interactive") {
   initObserver();
+  initMicCapture();
 } else {
-  window.addEventListener("DOMContentLoaded", initObserver);
+  window.addEventListener("DOMContentLoaded", () => {
+    initObserver();
+    initMicCapture();
+  });
 }
 
 function initObserver() {
@@ -41,6 +45,64 @@ function initObserver() {
   // Periodic fallback scan every 5 seconds
   setInterval(scanMeetDOM, 5000);
   scanMeetDOM();
+}
+
+// ── Microphone Capture ──────────────────────────────────────────────────
+// The content script runs inside the Google Meet tab and CAN access
+// getUserMedia for the microphone. The offscreen document cannot.
+// We capture 500ms WebM/Opus chunks and forward them to the background
+// script, which sends them to the backend WebSocket as MIC_AUDIO_CHUNK.
+let micRecorder: MediaRecorder | null = null;
+let micInitSegment: Uint8Array | null = null;
+
+function makeMicStandaloneChunk(raw: Uint8Array): Uint8Array {
+  if (!micInitSegment) {
+    micInitSegment = raw;
+    return raw;
+  }
+  const combined = new Uint8Array(micInitSegment.length + raw.length);
+  combined.set(micInitSegment, 0);
+  combined.set(raw, micInitSegment.length);
+  return combined;
+}
+
+async function initMicCapture() {
+  try {
+    const micStream = await navigator.mediaDevices.getUserMedia({
+      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+    });
+    console.log("[SCIE Content Script] Microphone access granted.");
+
+    let mime = "audio/webm;codecs=opus";
+    if (!MediaRecorder.isTypeSupported(mime)) {
+      mime = "audio/webm";
+    }
+
+    micRecorder = new MediaRecorder(micStream, { mimeType: mime });
+
+    micRecorder.ondataavailable = async (event) => {
+      if (event.data && event.data.size > 0) {
+        try {
+          const buffer = await event.data.arrayBuffer();
+          const raw = new Uint8Array(buffer);
+          const standalone = makeMicStandaloneChunk(raw);
+          const byteArray = Array.from(standalone);
+          chrome.runtime.sendMessage({
+            type: "MIC_AUDIO_CHUNK",
+            timestamp: Date.now(),
+            data: byteArray,
+          }).catch(() => {});
+        } catch (err: any) {
+          console.error("[SCIE Content Script] Mic chunk error:", err);
+        }
+      }
+    };
+
+    micRecorder.start(500); // 500ms chunks, same as tab audio
+    console.log("[SCIE Content Script] Microphone recording started (500ms chunks).");
+  } catch (err: any) {
+    console.warn("[SCIE Content Script] Microphone access denied or unavailable:", err.message);
+  }
 }
 
 /**

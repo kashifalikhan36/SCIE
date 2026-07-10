@@ -7,6 +7,7 @@ class AudioChunk(BaseModel):
   chunk_index: int
   data: bytes
   file_path: Optional[str] = None
+  chunk_type: str = "audio"  # "audio" (tab) or "mic_audio" (mic)
 
 class SpeechSegment(BaseModel):
   start: float = Field(..., description="Speech start time in seconds from window start")

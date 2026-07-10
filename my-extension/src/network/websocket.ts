@@ -1,7 +1,7 @@
 import { logger } from "../utils/logger";
 import { updateStoredState } from "../storage/store";
 
-export type MessageType = "event" | "metadata" | "audio" | "video" | "heartbeat";
+export type MessageType = "event" | "metadata" | "audio" | "mic_audio" | "video" | "heartbeat";
 
 export interface TextMessage {
   type: MessageType;
@@ -166,7 +166,7 @@ export class WebSocketManager {
     }
   }
 
-  sendBinary(type: "audio" | "video", timestamp: number, chunkPayload: ArrayBuffer) {
+  sendBinary(type: "audio" | "mic_audio" | "video", timestamp: number, chunkPayload: ArrayBuffer) {
     if (!this.activeMeetingId) {
       logger.warn(`Attempted to send binary of type ${type} but no active meeting ID is set.`);
       return;
@@ -183,7 +183,7 @@ export class WebSocketManager {
     }
   }
 
-  private buildBinaryPacket(type: "audio" | "video", timestamp: number, meetingId: string, payload: ArrayBuffer): ArrayBuffer {
+  private buildBinaryPacket(type: "audio" | "mic_audio" | "video", timestamp: number, meetingId: string, payload: ArrayBuffer): ArrayBuffer {
     const headerJson = JSON.stringify({ type, timestamp, meeting_id: meetingId });
     const headerBytes = new TextEncoder().encode(headerJson);
     const headerLen = headerBytes.byteLength;

@@ -28,33 +28,46 @@ class AudioEnginePipeline:
     self.storage_manager = AudioStorageManager()
 
   async def process_window(self, meeting_id: str, chunks: List[AudioChunk]) -> List[VoiceEvidence]:
-    """Processes a window of sequential audio chunks through all stages of the pipeline."""
+    """Processes a window of sequential audio chunks, separating tab and mic streams."""
     if not chunks:
       return []
 
     # Ensure chunks are ordered by index
     chunks = sorted(chunks, key=lambda x: x.chunk_index)
     
+    tab_chunks = [c for c in chunks if c.chunk_type == "audio"]
+    mic_chunks = [c for c in chunks if c.chunk_type == "mic_audio"]
+
+    evidence_list = []
+    if tab_chunks:
+      evidence_list.extend(await self._process_sub_window(meeting_id, tab_chunks, stream_name="tab"))
+    if mic_chunks:
+      evidence_list.extend(await self._process_sub_window(meeting_id, mic_chunks, stream_name="mic"))
+      
+    return evidence_list
+
+  async def _process_sub_window(self, meeting_id: str, chunks: List[AudioChunk], stream_name: str) -> List[VoiceEvidence]:
+    """Internal method to process a homogenous stream of chunks (either all tab or all mic)."""
     # 1. Combine audio data bytes in this window
     combined_audio = b"".join(c.data for c in chunks)
-    # Each chunk represents 250ms (0.25 seconds)
-    duration_sec = len(chunks) * 0.25
+    # Each chunk represents 500ms (0.5 seconds)
+    duration_sec = len(chunks) * 0.5
 
-    logger.info(f"Processing pipeline window for meeting {meeting_id} with {len(chunks)} chunks ({duration_sec}s of audio)")
+    logger.info(f"Processing '{stream_name}' audio pipeline window for meeting {meeting_id} with {len(chunks)} chunks ({duration_sec}s of audio)")
 
     try:
       # 2. Stage: Voice Activity Detection (VAD)
       speech_segments = await self.vad.detect_speech(combined_audio, duration_sec)
       
-      # If no speech is detected, return early (as requested)
+      # If no speech is detected, return early
       if not speech_segments:
-        logger.info("VAD: No speech detected in this window. Pipeline execution terminated early.")
+        logger.info(f"VAD ({stream_name}): No speech detected in this window. Pipeline execution terminated early.")
         return []
 
       # 3. Stage: Speaker Diarization
       diarized_segments = await self.diarizer.diarize(combined_audio, speech_segments)
       if not diarized_segments:
-        logger.info("Diarization: No diarized segments found. Pipeline execution terminated early.")
+        logger.info(f"Diarization ({stream_name}): No diarized segments found. Pipeline execution terminated early.")
         return []
 
       collected_evidence: List[VoiceEvidence] = []
@@ -68,13 +81,19 @@ class AudioEnginePipeline:
         )
 
         # 4. Stage: Speaker Recognition
+        # If it's the mic stream, it is always the local user ("you")
         recognition_res = await self.recognizer.recognize(meeting_id, combined_audio, diarized_seg)
+        if stream_name == "mic":
+            recognition_res.matched_speaker_id = "you"
+            recognition_res.speaker_label = "you"
 
-        # 5. Stage: Speech To Text (Whisper)
+        # 5. Stage: Speech To Text — pass individual chunk bytes so each WebM is
+        # decoded separately (concatenating raw WebM bytes creates invalid multi-header streams)
         transcript_res = await self.transcriber.transcribe(
-            combined_audio, 
-            diarized_seg, 
-            recognition_res.matched_speaker_id
+            combined_audio,
+            diarized_seg,
+            recognition_res.matched_speaker_id,
+            chunk_data_list=[c.data for c in chunks]
         )
 
         # 6. Stage: Language Detection
@@ -142,6 +161,5 @@ class AudioEnginePipeline:
       return collected_evidence
 
     except Exception as e:
-      logger.error(f"Pipeline processing failed for window in meeting {meeting_id}: {e}")
-      # Never crash the pipeline, return empty evidence on failures
+      logger.error(f"Pipeline processing failed for '{stream_name}' window in meeting {meeting_id}: {e}")
       return []

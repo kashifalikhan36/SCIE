@@ -490,6 +490,13 @@
       }
       return;
     }
+    if (message.type === "MIC_AUDIO_CHUNK") {
+      if (isMonitoring && message.data) {
+        const arrayBuffer = new Uint8Array(message.data).buffer;
+        wsManager.sendBinary("mic_audio", message.timestamp, arrayBuffer);
+      }
+      return;
+    }
     if (message.type === "VIDEO_CHUNK") {
       if (isMonitoring && message.data) {
         const arrayBuffer = new Uint8Array(message.data).buffer;
