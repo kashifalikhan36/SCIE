@@ -2,13 +2,13 @@
     "candidate": {
         "participant_id": "participant_002",
         "display_name": "Chivukula Jagannath",
-        "confidence": 92.47
+        "confidence": 92.76
     },
     "ranking": [
         {
             "participant_id": "participant_002",
             "display_name": "Chivukula Jagannath",
-            "confidence": 92.47,
+            "confidence": 92.76,
             "evidence_summary": [
                 {
                     "module": "Name Match",
@@ -48,8 +48,8 @@
                 },
                 {
                     "module": "Conversation Role",
-                    "confidence": 99.0,
-                    "reason": "Mostly answers questions, introduces himself, explains his thought process and coding approach, responds to technical prompts, asks clarifying questions about the problem, and receives evaluation and feedback throughout the session. The metadata and interview flow clearly indicate he is the candidate being assessed.",
+                    "confidence": 100.0,
+                    "reason": "He introduces himself, answers the interviewer's questions, clarifies assumptions, explains his problem-solving approach and coding logic, writes the solution, responds to feedback, and is clearly the person being evaluated throughout the mock interview.",
                     "metadata": {
                         "role_assigned": "candidate"
                     }
@@ -57,7 +57,7 @@
                 {
                     "module": "Transcript Mentions",
                     "confidence": 90.0,
-                    "reason": "Interviewer repeatedly addressed participant as 'Chivukula Jagannath': Shrayansh Jain repeatedly addresses the candidate directly as 'Jagannath' in greetings and closing remarks, such as 'Welcome Jagannath to this mock interview' and 'Good luck, Jagannath.'",
+                    "reason": "Interviewer repeatedly addressed participant as 'Chivukula Jagannath': Shrayansh Jain repeatedly addresses Chivukula Jagannath using the name 'Jagannath', such as in 'Welcome Jagannath to this mock interview' and 'Good luck, Jagannath.'",
                     "metadata": {
                         "mentioned": true
                     }
@@ -68,13 +68,13 @@
                     "reason": "Timeline events: Joined interview, Turned on webcam, Participated in speaking, Shared screen",
                     "metadata": {
                         "events": [
+                            "webcam_off",
+                            "screen_share_start",
+                            "speaking_start",
                             "leave",
                             "screen_share_stop",
-                            "screen_share_start",
                             "webcam_on",
-                            "join",
-                            "webcam_off",
-                            "speaking_start"
+                            "join"
                         ]
                     }
                 },
@@ -130,8 +130,8 @@
                 },
                 {
                     "module": "Conversation Role",
-                    "confidence": 1.0,
-                    "reason": "Mostly asks questions, introduces the mock interview, explains the problem statement, probes edge cases, gives hints, evaluates the candidate’s approach, discusses time complexity, and provides detailed feedback at the end. The candidate metadata and calendar invite also identify Shrayansh Jain as the interviewer.",
+                    "confidence": 0.0,
+                    "reason": "He introduces the mock interview, asks the majority of questions, presents the DSA problem, probes edge cases, gives hints, evaluates the candidate's responses, discusses time complexity, and provides detailed feedback at the end. His behavior consistently matches that of an interviewer.",
                     "metadata": {
                         "role_assigned": "interviewer"
                     }
@@ -150,11 +150,11 @@
                     "reason": "Timeline events: Joined interview, Turned on webcam, Participated in speaking",
                     "metadata": {
                         "events": [
-                            "speaking_start",
-                            "webcam_on",
-                            "join",
                             "webcam_off",
-                            "leave"
+                            "speaking_start",
+                            "leave",
+                            "webcam_on",
+                            "join"
                         ]
                     }
                 },
@@ -173,7 +173,7 @@
         {
             "participant_id": "participant_002",
             "display_name": "Chivukula Jagannath",
-            "confidence": 92.47,
+            "confidence": 92.76,
             "evidence_summary": [
                 {
                     "module": "Name Match",
@@ -213,8 +213,8 @@
                 },
                 {
                     "module": "Conversation Role",
-                    "confidence": 99.0,
-                    "reason": "Mostly answers questions, introduces himself, explains his thought process and coding approach, responds to technical prompts, asks clarifying questions about the problem, and receives evaluation and feedback throughout the session. The metadata and interview flow clearly indicate he is the candidate being assessed.",
+                    "confidence": 100.0,
+                    "reason": "He introduces himself, answers the interviewer's questions, clarifies assumptions, explains his problem-solving approach and coding logic, writes the solution, responds to feedback, and is clearly the person being evaluated throughout the mock interview.",
                     "metadata": {
                         "role_assigned": "candidate"
                     }
@@ -222,7 +222,7 @@
                 {
                     "module": "Transcript Mentions",
                     "confidence": 90.0,
-                    "reason": "Interviewer repeatedly addressed participant as 'Chivukula Jagannath': Shrayansh Jain repeatedly addresses the candidate directly as 'Jagannath' in greetings and closing remarks, such as 'Welcome Jagannath to this mock interview' and 'Good luck, Jagannath.'",
+                    "reason": "Interviewer repeatedly addressed participant as 'Chivukula Jagannath': Shrayansh Jain repeatedly addresses Chivukula Jagannath using the name 'Jagannath', such as in 'Welcome Jagannath to this mock interview' and 'Good luck, Jagannath.'",
                     "metadata": {
                         "mentioned": true
                     }
@@ -233,13 +233,13 @@
                     "reason": "Timeline events: Joined interview, Turned on webcam, Participated in speaking, Shared screen",
                     "metadata": {
                         "events": [
+                            "webcam_off",
+                            "screen_share_start",
+                            "speaking_start",
                             "leave",
                             "screen_share_stop",
-                            "screen_share_start",
                             "webcam_on",
-                            "join",
-                            "webcam_off",
-                            "speaking_start"
+                            "join"
                         ]
                     }
                 },
@@ -295,8 +295,8 @@
                 },
                 {
                     "module": "Conversation Role",
-                    "confidence": 1.0,
-                    "reason": "Mostly asks questions, introduces the mock interview, explains the problem statement, probes edge cases, gives hints, evaluates the candidate’s approach, discusses time complexity, and provides detailed feedback at the end. The candidate metadata and calendar invite also identify Shrayansh Jain as the interviewer.",
+                    "confidence": 0.0,
+                    "reason": "He introduces the mock interview, asks the majority of questions, presents the DSA problem, probes edge cases, gives hints, evaluates the candidate's responses, discusses time complexity, and provides detailed feedback at the end. His behavior consistently matches that of an interviewer.",
                     "metadata": {
                         "role_assigned": "interviewer"
                     }
@@ -315,11 +315,11 @@
                     "reason": "Timeline events: Joined interview, Turned on webcam, Participated in speaking",
                     "metadata": {
                         "events": [
-                            "speaking_start",
-                            "webcam_on",
-                            "join",
                             "webcam_off",
-                            "leave"
+                            "speaking_start",
+                            "leave",
+                            "webcam_on",
+                            "join"
                         ]
                     }
                 },
