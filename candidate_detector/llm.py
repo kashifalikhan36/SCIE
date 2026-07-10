@@ -1,5 +1,5 @@
 from openai import AzureOpenAI
-from .config import AZURE_OPENAI_API_KEY, AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_API_VERSION, CHAT_DEPLOYMENT
+from config import AZURE_OPENAI_API_KEY, AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_API_VERSION, CHAT_DEPLOYMENT
 
 def get_chat_client() -> AzureOpenAI:
     return AzureOpenAI(

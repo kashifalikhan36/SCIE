@@ -1,5 +1,5 @@
 from openai import AzureOpenAI
-from .config import AZURE_OPENAI_API_KEY, AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_API_VERSION, EMBEDDING_DEPLOYMENT
+from config import AZURE_OPENAI_API_KEY, AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_API_VERSION, EMBEDDING_DEPLOYMENT
 
 def get_embedding_client() -> AzureOpenAI:
     return AzureOpenAI(

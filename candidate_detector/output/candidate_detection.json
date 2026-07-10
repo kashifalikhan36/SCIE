@@ -1,0 +1,219 @@
+{
+    "candidate": {
+        "participant_id": "participant_002",
+        "display_name": "Chivukula Jagannath",
+        "confidence": 59.4
+    },
+    "ranking": [
+        {
+            "participant_id": "participant_002",
+            "display_name": "Chivukula Jagannath",
+            "confidence": 59.4,
+            "evidence_summary": [
+                {
+                    "module": "Name Match",
+                    "confidence": 100.0,
+                    "reason": "Exact name match: chivukula jagannath"
+                },
+                {
+                    "module": "Email Match",
+                    "confidence": 0.0,
+                    "reason": "Participant email missing, cannot compare."
+                },
+                {
+                    "module": "Webcam",
+                    "confidence": 50.0,
+                    "reason": "Camera toggled often or mostly off (2 toggles)."
+                },
+                {
+                    "module": "Screen Share",
+                    "confidence": 85.0,
+                    "reason": "Shared screen once (typical for candidate coding)."
+                },
+                {
+                    "module": "Speaking",
+                    "confidence": 85.0,
+                    "reason": "Speaking ratio 49.1% is typical for a candidate. (13 turns)"
+                },
+                {
+                    "module": "Interviewer Detection",
+                    "confidence": 100.0,
+                    "reason": "Participant is not in interviewer list."
+                },
+                {
+                    "module": "Transcript",
+                    "confidence": 100.0,
+                    "reason": "Jagannath mostly answers questions, introduces himself when asked, shares his screen, clarifies the problem, explains and codes the solution, discusses edge cases and complexity, and receives feedback at the end."
+                },
+                {
+                    "module": "Embedding Similarity",
+                    "confidence": 99.99987796660974,
+                    "reason": "Semantic similarity score: 1.00"
+                },
+                {
+                    "module": "Metadata",
+                    "confidence": 80.0,
+                    "reason": "Participant name mentioned in Calendar Invite."
+                }
+            ]
+        },
+        {
+            "participant_id": "participant_001",
+            "display_name": "Shrayansh Jain",
+            "confidence": 17.75,
+            "evidence_summary": [
+                {
+                    "module": "Name Match",
+                    "confidence": 0.0,
+                    "reason": "No significant name match found."
+                },
+                {
+                    "module": "Email Match",
+                    "confidence": 0.0,
+                    "reason": "Participant email missing, cannot compare."
+                },
+                {
+                    "module": "Webcam",
+                    "confidence": 50.0,
+                    "reason": "Camera toggled often or mostly off (2 toggles)."
+                },
+                {
+                    "module": "Screen Share",
+                    "confidence": 30.0,
+                    "reason": "Did not share screen."
+                },
+                {
+                    "module": "Speaking",
+                    "confidence": 85.0,
+                    "reason": "Speaking ratio 50.9% is typical for a candidate. (13 turns)"
+                },
+                {
+                    "module": "Interviewer Detection",
+                    "confidence": 0.0,
+                    "reason": "Participant name matches interviewer list."
+                },
+                {
+                    "module": "Transcript",
+                    "confidence": 0.0,
+                    "reason": "Shrayansh welcomes Jagannath to the mock interview, asks most of the questions, gives the DSA problem, provides hints, asks about complexity, controls the interview flow, and gives final feedback. He also calls the other participant by name, 'Jagannath.'"
+                },
+                {
+                    "module": "Embedding Similarity",
+                    "confidence": 0.0,
+                    "reason": "Semantic similarity score: 0.26"
+                },
+                {
+                    "module": "Metadata",
+                    "confidence": 80.0,
+                    "reason": "Participant name mentioned in Calendar Invite."
+                }
+            ]
+        }
+    ],
+    "evidence": [
+        {
+            "participant_id": "participant_002",
+            "display_name": "Chivukula Jagannath",
+            "confidence": 59.4,
+            "evidence_summary": [
+                {
+                    "module": "Name Match",
+                    "confidence": 100.0,
+                    "reason": "Exact name match: chivukula jagannath"
+                },
+                {
+                    "module": "Email Match",
+                    "confidence": 0.0,
+                    "reason": "Participant email missing, cannot compare."
+                },
+                {
+                    "module": "Webcam",
+                    "confidence": 50.0,
+                    "reason": "Camera toggled often or mostly off (2 toggles)."
+                },
+                {
+                    "module": "Screen Share",
+                    "confidence": 85.0,
+                    "reason": "Shared screen once (typical for candidate coding)."
+                },
+                {
+                    "module": "Speaking",
+                    "confidence": 85.0,
+                    "reason": "Speaking ratio 49.1% is typical for a candidate. (13 turns)"
+                },
+                {
+                    "module": "Interviewer Detection",
+                    "confidence": 100.0,
+                    "reason": "Participant is not in interviewer list."
+                },
+                {
+                    "module": "Transcript",
+                    "confidence": 100.0,
+                    "reason": "Jagannath mostly answers questions, introduces himself when asked, shares his screen, clarifies the problem, explains and codes the solution, discusses edge cases and complexity, and receives feedback at the end."
+                },
+                {
+                    "module": "Embedding Similarity",
+                    "confidence": 99.99987796660974,
+                    "reason": "Semantic similarity score: 1.00"
+                },
+                {
+                    "module": "Metadata",
+                    "confidence": 80.0,
+                    "reason": "Participant name mentioned in Calendar Invite."
+                }
+            ]
+        },
+        {
+            "participant_id": "participant_001",
+            "display_name": "Shrayansh Jain",
+            "confidence": 17.75,
+            "evidence_summary": [
+                {
+                    "module": "Name Match",
+                    "confidence": 0.0,
+                    "reason": "No significant name match found."
+                },
+                {
+                    "module": "Email Match",
+                    "confidence": 0.0,
+                    "reason": "Participant email missing, cannot compare."
+                },
+                {
+                    "module": "Webcam",
+                    "confidence": 50.0,
+                    "reason": "Camera toggled often or mostly off (2 toggles)."
+                },
+                {
+                    "module": "Screen Share",
+                    "confidence": 30.0,
+                    "reason": "Did not share screen."
+                },
+                {
+                    "module": "Speaking",
+                    "confidence": 85.0,
+                    "reason": "Speaking ratio 50.9% is typical for a candidate. (13 turns)"
+                },
+                {
+                    "module": "Interviewer Detection",
+                    "confidence": 0.0,
+                    "reason": "Participant name matches interviewer list."
+                },
+                {
+                    "module": "Transcript",
+                    "confidence": 0.0,
+                    "reason": "Shrayansh welcomes Jagannath to the mock interview, asks most of the questions, gives the DSA problem, provides hints, asks about complexity, controls the interview flow, and gives final feedback. He also calls the other participant by name, 'Jagannath.'"
+                },
+                {
+                    "module": "Embedding Similarity",
+                    "confidence": 0.0,
+                    "reason": "Semantic similarity score: 0.26"
+                },
+                {
+                    "module": "Metadata",
+                    "confidence": 80.0,
+                    "reason": "Participant name mentioned in Calendar Invite."
+                }
+            ]
+        }
+    ]
+}
