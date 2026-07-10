@@ -8,7 +8,7 @@ This project simulates a real-world analytics environment where video, audio, an
 
 ## Demo
 
-[Insert YouTube Video Demo Here]
+[https://youtu.be/oTM3oNAglbs?si=3cr_yp4xX_EVIPXr]
 
 ---
 
