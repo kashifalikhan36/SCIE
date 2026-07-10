@@ -6,7 +6,13 @@ This project simulates a real-world analytics environment where video, audio, an
 
 ---
 
-## How It Works: The Workflow
+## Demo
+
+[Insert YouTube Video Demo Here]
+
+---
+
+## Architecture
 
 The SCIE system operates in two distinct phases: **Data Generation** (processing raw video into structured intelligence) and **Candidate Detection** (analyzing that intelligence using a dynamic, weighted Fusion Engine).
 
@@ -51,59 +57,40 @@ graph TD
 
 ---
 
-## Phase 1: Data Pipeline & Video Processing
+## Approach
 
-The project starts with an actual interview video (`video/interview.mp4`). To analyze this, we extract structured data from the raw media.
-
-1. **Audio Extraction & Transcription**:
-   - We extract a lightweight `.mp3` from the video to bypass size limits.
-   - We send the audio to **Groq's Whisper API (`whisper-large-v3`)** for hyper-fast, highly accurate transcription.
-   
-2. **Data Generation & Structuring**:
-   - The raw transcript is passed to **Azure OpenAI's reasoning model (`gpt-5.5`)** to generate a comprehensive `data.json` file.
-   - This JSON mimics an advanced web-RTC backend, structuring events like participant joins, screen sharing, webcam toggles, speaking ratios, and candidate calendar metadata.
-
----
-
-## Phase 2: Candidate Detection Architecture
-
-The core of SCIE is the `candidate_detector` pipeline. It processes `data.json` by running every participant through independent, non-blocking **Evidence Modules**. 
-
-### Why Evidence Fusion?
-Every available signal contributes evidence. Every module asks: *"Does this piece of evidence increase or decrease the probability that this participant is the candidate?"* If data is missing (like an email address), the module gracefully skips rather than crashing or penalizing.
+The core philosophy of SCIE is **Evidence Fusion**. Instead of relying on a single point of failure (e.g., face recognition or simple email matching), every available signal contributes evidence towards the final decision. Every module asks: *"Does this piece of evidence increase or decrease the probability that this participant is the candidate?"* If data is missing (like an email address), the module gracefully skips rather than crashing or arbitrarily penalizing the participant.
 
 ### The Evidence Modules
 
 1. **Conversation Role (`conversation_role.py`) - Weight: 25**
-   - *How*: Feeds the transcript to **Azure OpenAI (`gpt-5.3-chat`)** to identify structured conversational dynamics: who asks questions, who answers, who introduces themselves, and who is evaluated.
+   - *Approach*: Feeds the transcript to **Azure OpenAI (`gpt-5.3-chat`)** to identify structured conversational dynamics: who asks questions, who answers, who introduces themselves, and who is evaluated.
 
 2. **Transcript Mentions (`transcript_mentions.py`) - Weight: 15**
-   - *How*: Uses an LLM to scan the transcript to see if a participant is repeatedly addressed by the known candidate's name.
+   - *Approach*: Uses an LLM to scan the transcript to see if a participant is repeatedly addressed by the known candidate's name.
 
 3. **Speaking Behaviour (`speaking.py`) - Weight: 15**
-   - *How*: Calculates total speaking duration, speaking ratio, number of turns, and average answer length to identify candidates responding to questions.
+   - *Approach*: Calculates total speaking duration, speaking ratio, number of turns, and average answer length to identify candidates responding to questions.
 
 4. **Name Match (`name_match.py`) - Weight: 15**
-   - *How*: Uses **RapidFuzz** for robust string matching, gracefully handling exact matches, partial names, typos, and initials against the calendar metadata.
+   - *Approach*: Uses **RapidFuzz** for robust string matching, gracefully handling exact matches, partial names, typos, and initials against the calendar metadata.
 
 5. **Identity Correlation (`identity_correlation.py`) - Weight: 15 (Dynamic)**
-   - *How*: Compares participant emails or account IDs to the calendar invite. If identity information does not exist, the module skips completely.
+   - *Approach*: Compares participant emails or account IDs to the calendar invite. If identity information does not exist, the module skips completely.
 
 6. **Event Timeline (`timeline.py`) - Weight: 5**
-   - *How*: Merges all events (Join, Webcam, Speaking, Screen Share) chronologically to evaluate if a participant's timeline resembles a typical candidate sequence.
+   - *Approach*: Merges all events (Join, Webcam, Speaking, Screen Share) chronologically to evaluate if a participant's timeline resembles a typical candidate sequence.
 
 7. **Webcam Behaviour (`webcam.py`) - Weight: 5**
-   - *How*: Evaluates camera uptime, stability, continuity, and toggles.
+   - *Approach*: Evaluates camera uptime, stability, continuity, and toggles.
 
 8. **Screen Share (`screen_share.py`) - Weight: 3**
-   - *How*: Offers a minor confidence boost if a participant shares their screen. Never penalizes participants if no one shares.
+   - *Approach*: Offers a minor confidence boost if a participant shares their screen. Never penalizes participants if no one shares.
 
 9. **Interviewer Detection (`interviewer_detection.py`) - Penalty Module**
-   - *How*: Heavily penalizes participants whose display names match known interviewers in the calendar metadata.
+   - *Approach*: Heavily penalizes participants whose display names match known interviewers in the calendar metadata.
 
----
-
-## The Dynamic Fusion Engine
+### The Dynamic Fusion Engine
 
 The `FusionEngine` aggregates scores based on their assigned weights. 
 
@@ -120,6 +107,29 @@ The final output automatically generates an explanation detailing exactly *why* 
 
 **Ambiguity Handling:**
 If the final scores of the top two participants are within 5 points of each other, the engine refuses to force a winner. It flags the decision as `AMBIGUOUS`, returning suggestions and highlighting the missing evidence modules.
+
+---
+
+## Trade-offs
+
+During the design and implementation of SCIE, several engineering trade-offs were made:
+
+1. **LLM vs. Heuristics for Transcript Analysis**: We opted to use Azure OpenAI for deep conversational semantic analysis rather than simple regex heuristics. *Trade-off*: Higher accuracy and adaptability at the cost of API latency and token costs.
+2. **Missing Data Handling vs. Hard Requirements**: We chose a dynamic weighting system that skips missing data. *Trade-off*: Highly resilient to imperfect data streams, but risks false positives if too many high-weight modules are skipped due to missing data.
+3. **Evidence Fusion vs. Biometrics**: We completely avoided facial recognition and voice biometrics. *Trade-off*: Eliminates heavy privacy/compliance hurdles and complex media processing pipelines, but trades away the deterministic certainty of biometric matching.
+
+---
+
+## What You'd Improve Next
+
+If given more time and resources, the next iterations of SCIE would focus on:
+
+1. **Vector Embeddings for Conversational Nuance**: Rather than sending entire transcripts to the LLM, we could compute embeddings for speaking turns to identify semantic clusters representing "Interviewing Questions" vs "Technical Answers."
+2. **Real-time Streaming Support**: Refactor the architecture to process events as they stream via WebSockets rather than waiting for post-call batch processing.
+3. **Advanced Timeline Interleaving**: Build deeper heuristics into `timeline.py` to recognize specific interactive patterns, such as "Interviewer speaks -> 2 seconds latency -> Candidate speaks for 3 minutes -> Screen share begins."
+4. **Multi-Candidate Evaluation**: Extend the logic to gracefully handle group interviews (e.g., panel interviews with multiple candidates).
+
+---
 
 ## Tech Stack & Tools Used
 - **Python 3.12+**: Core language using modular OOP architecture.
